@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { BookOpen, PenTool, BookMarked, FileText } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
+import SeraChat from './SeraChat';
 
 export default function Home() {
   const [page, setPage] = useState(1);
@@ -60,6 +61,10 @@ export default function Home() {
     },
   ];
 
+  if (page === 3) {
+    return <SeraChat goBack={() => setPage(2)} />;
+  }  
+
   if (page === 1) {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center">
@@ -85,13 +90,24 @@ export default function Home() {
         >
           {slides.map((slide) => (
             <SwiperSlide key={slide.id}>
-              <div className="relative w-full h-full rounded-xl overflow-hidden shadow-lg">
+              <div
+                className="relative w-full h-full rounded-xl overflow-hidden shadow-lg"
+                onClick={() => {
+                  if (selectedId === slide.id) {
+                    if (slide.id === 2) {
+                      setPage(3); // 세라 클릭 → 설명 나왔을 때 한 번 더 클릭 → 채팅 진입
+                    }
+                  } else {
+                    setSelectedId(slide.id); // 첫 클릭 → 상세 정보 노출
+                  }
+                }}
+              >
                 <img
                   src={slide.src}
                   alt={slide.name}
                   className="w-full h-full object-cover cursor-pointer"
-                  onClick={() => setSelectedId(slide.id)}
                 />
+
                 <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 text-white p-3">
                   <p className="text-lg font-bold">
                     📖 {slide.name} - {slide.description}
