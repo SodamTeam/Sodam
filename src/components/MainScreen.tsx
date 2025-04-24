@@ -1,13 +1,23 @@
 "use client";
 
-import { useState } from 'react';
-import { BookOpen, PenTool, BookMarked, FileText } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { BookOpen, PenTool, BookMarked, FileText, X } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
+import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
+import '../app/animations.css';
 
 export default function Home() {
   const [page, setPage] = useState(1);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const swiperRef = useRef<SwiperType>();
+
+  const handleSelect = (id: number) => {
+    setSelectedId(selectedId === id ? null : id);
+    setTimeout(() => {
+      swiperRef.current?.update();
+    }, 0);
+  };
 
   const slides = [
     {
@@ -82,23 +92,35 @@ export default function Home() {
           spaceBetween={30}
           slidesPerView={1}
           className="w-80 h-[500px]"
+          onSwiper={(swiper) => {
+            swiperRef.current = swiper;
+          }}
         >
           {slides.map((slide) => (
-            <SwiperSlide key={slide.id}>
+            <SwiperSlide key={slide.id} className="h-full">
               <div className="relative w-full h-full rounded-xl overflow-hidden shadow-lg">
                 <img
                   src={slide.src}
                   alt={slide.name}
-                  className="w-full h-full object-cover cursor-pointer"
-                  onClick={() => setSelectedId(slide.id)}
+                  className="w-full h-full object-cover"
+                  onClick={() => handleSelect(slide.id)}
                 />
-                <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 text-white p-3">
-                  <p className="text-lg font-bold">
-                    📖 {slide.name} - {slide.description}
-                  </p>
-                </div>
+                {!selectedId && (
+                  <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 text-white p-3">
+                    <p className="text-lg font-bold">
+                      📖 {slide.name} - {slide.description}
+                    </p>
+                  </div>
+                )}
                 {selectedId === slide.id && (
-                  <div className="absolute bottom-0 left-0 w-full text-white p-4 bg-black/70 backdrop-blur-md animate-fade-in-up">
+                  <div className="absolute top-0 left-0 w-full h-full flex flex-col justify-end text-white p-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent backdrop-blur-sm rounded-xl animate-slide-up-fade">
+                    <button 
+                      onClick={() => handleSelect(slide.id)}
+                      className="absolute top-3 right-3 p-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                      aria-label="닫기"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                     <p className="text-base font-semibold mb-2">{slide.name}{slide.name === '하린' ? '과' : '와'} 함께 할 수 있는 것들</p>
                     <ul className="text-sm space-y-1">
                       {slide.features.map((feature, idx) => (
