@@ -7,17 +7,11 @@ import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
 import '../app/animations.css';
 import SeraChat from './SeraChat';
+
 export default function Home() {
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const swiperRef = useRef<SwiperType>();
-
-  const handleSelect = (id: number) => {
-    setSelectedId(selectedId === id ? null : id);
-    setTimeout(() => {
-      swiperRef.current?.update();
-    }, 0);
-  };
+  const swiperRef = useRef<SwiperType | null>(null);
 
   const slides = [
     {
@@ -72,7 +66,7 @@ export default function Home() {
 
   if (page === 3) {
     return <SeraChat goBack={() => setPage(2)} />;
-  }  
+  }
 
   if (page === 1) {
     return (
@@ -107,7 +101,7 @@ export default function Home() {
                   src={slide.src}
                   alt={slide.name}
                   className="w-full h-full object-cover cursor-pointer"
-                  onClick={() => setSelectedId(slide.id)}
+                  onClick={() => setSelectedId(slide.id === selectedId ? null : slide.id)}
                 />
                 <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 text-white p-3">
                   <p className="text-lg font-bold">
@@ -116,15 +110,17 @@ export default function Home() {
                 </div>
                 {selectedId === slide.id && (
                   <div className="absolute top-0 left-0 w-full h-full flex flex-col justify-end text-white p-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent backdrop-blur-sm rounded-xl animate-slide-up-fade">
-                    <button 
-                      onClick={() => handleSelect(slide.id)}
+                    <button
+                      onClick={() => setSelectedId(null)}
                       className="absolute top-3 right-3 p-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                       aria-label="닫기"
                     >
                       <X className="w-5 h-5" />
                     </button>
-                    <p className="text-base font-semibold mb-2">{slide.name}{slide.name === '하린' ? '과' : '와'} 함께 할 수 있는 것들</p>
-                    <ul className="text-sm space-y-1">
+                    <p className="text-base font-semibold mb-2">
+                      {slide.name}{slide.name === '하린' ? '과' : '와'} 함께 할 수 있는 것들
+                    </p>
+                    <ul className="text-sm space-y-1 mb-4">
                       {slide.features.map((feature, idx) => (
                         <li key={idx} className="flex items-center gap-2">
                           {idx === 0 && <PenTool className="w-4 h-4" />}
@@ -135,6 +131,14 @@ export default function Home() {
                         </li>
                       ))}
                     </ul>
+                    {slide.id === 2 && (
+                      <button
+                        onClick={() => setPage(3)}
+                        className="mt-auto bg-white text-black font-medium py-2 px-4 rounded-full hover:bg-gray-200 transition"
+                      >
+                        세라와 채팅 시작하기
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
