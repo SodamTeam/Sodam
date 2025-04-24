@@ -6,7 +6,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
 import '../app/animations.css';
-
+import SeraChat from './SeraChat';
 export default function Home() {
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -70,6 +70,10 @@ export default function Home() {
     },
   ];
 
+  if (page === 3) {
+    return <SeraChat goBack={() => setPage(2)} />;
+  }  
+
   if (page === 1) {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center">
@@ -97,21 +101,19 @@ export default function Home() {
           }}
         >
           {slides.map((slide) => (
-            <SwiperSlide key={slide.id} className="h-full">
+            <SwiperSlide key={slide.id}>
               <div className="relative w-full h-full rounded-xl overflow-hidden shadow-lg">
                 <img
                   src={slide.src}
                   alt={slide.name}
-                  className="w-full h-full object-cover"
-                  onClick={() => handleSelect(slide.id)}
+                  className="w-full h-full object-cover cursor-pointer"
+                  onClick={() => setSelectedId(slide.id)}
                 />
-                {!selectedId && (
-                  <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 text-white p-3">
-                    <p className="text-lg font-bold">
-                      📖 {slide.name} - {slide.description}
-                    </p>
-                  </div>
-                )}
+                <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 text-white p-3">
+                  <p className="text-lg font-bold">
+                    📖 {slide.name} - {slide.description}
+                  </p>
+                </div>
                 {selectedId === slide.id && (
                   <div className="absolute top-0 left-0 w-full h-full flex flex-col justify-end text-white p-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent backdrop-blur-sm rounded-xl animate-slide-up-fade">
                     <button 
