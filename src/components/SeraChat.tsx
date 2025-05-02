@@ -99,11 +99,22 @@ export default function SeraChat({ goBack }: SeraChatProps) {
         </div>
 
         {/* 선택지 버튼 */}
-        <div className="mt-6 flex gap-2 justify-center">
-          {[1, 2, 3, 4].map((_, idx) => (
-            <div key={idx} className="w-12 h-4 rounded-lg bg-gray-300" />
-          ))}
+        <div className="flex flex-wrap gap-2">
+          {["앱/웹 아이디어", "IT 용어 쉽게 풀기", "유용한 앱 소개", "코딩 놀이"].map((text, idx) => (
+            <button
+              key={idx}
+              onClick={() =>
+              setMessages((prev) => [...prev, { sender: '나', text }])
+              }
+              className="px-3 py-1 bg-gray-200 rounded-full text-sm whitespace-nowrap hover:bg-gray-300 transition"
+              >
+              {text}
+            </button>
+            ))}
         </div>
+
+
+
       </div>
 
       {/* 입력창 */}
