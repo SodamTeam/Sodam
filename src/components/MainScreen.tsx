@@ -7,6 +7,9 @@ import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
 import '../app/animations.css';
 import SeraChat from './SeraChat';
+import HarinChat from './HarinChat'; // 세라처럼
+
+
 
 export default function Home() {
   const [page, setPage] = useState(1);
@@ -67,6 +70,11 @@ export default function Home() {
   if (page === 3) {
     return <SeraChat goBack={() => setPage(2)} />;
   }
+  if (page === 4) {
+    return <HarinChat goBack={() => setPage(2)} />;
+  }
+
+  
 
   if (page === 1) {
     return (
@@ -131,6 +139,15 @@ export default function Home() {
                         </li>
                       ))}
                     </ul>
+
+                    {slide.id === 1 && (
+                      <button
+                        onClick={() => setPage(4)}
+                        className="mt-auto bg-white text-black font-medium py-2 px-4 rounded-full hover:bg-gray-200 transition"
+                      >
+                        하린과 채팅 시작하기
+                      </button>
+                    )}
                     {slide.id === 2 && (
                       <button
                         onClick={() => setPage(3)}
