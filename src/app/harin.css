@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up-fade {
+  animation: slide-up-fade 0.5s ease-out forwards;
+}
+.message-profile {
+    display: inline-block;
+    margin-right: 8px;
+  }
+  
+  .profile-small {
+    @apply rounded-full h-12 w-12;
+  }
+  
+  
+  .profile-small-intro {
+    @apply rounded-full h-9 w-9;
+    border: 2px solid #f8a2c4;
+    box-shadow: 0 0 4px rgba(248, 162, 196, 0.5);
+  }
+  
+
+body {
+  @apply m-0 font-sans bg-[#fefaf5];
+}
+
+.iphone-frame { 
+  @apply max-w-[390px] mx-auto border border-[#ccc] rounded-3xl overflow-hidden shadow-lg bg-white h-screen flex flex-col;
+}
+
+.app-header {
+  @apply flex justify-between items-center p-3 bg-[#fff0f5] border-b border-[#eee];
+  position: sticky;
+  top: 0;
+  z-index: 10; /* 상단 프로필 고정 */
+}
+
+.app-title {
+  @apply font-bold text-xl text-[#a0522d];
+}
+
+.profile {
+  @apply rounded-full h-7 ml-2;
+}
+
+.chat-container {
+  @apply flex-1 flex flex-col p-4 overflow-hidden; /* overflow-hidden 추가 */
+}
+
+  
+.chat-messages {
+  @apply overflow-y-auto flex flex-col mb-2;
+  height: 100%; /* 명시적으로 설정해주는 것이 좋음 */
+  max-height: calc(100vh - 290px); /* 적절히 헤더 + 버튼 + 입력창 높이 제외 */
+}
+
+.message {
+  @apply py-2 px-3 rounded-xl my-1 max-w-[80%] break-words leading-relaxed text-sm;
+}
+
+.message.harin {
+  @apply bg-[#fff0f5] text-[#a0522d] self-start;
+}
+
+.message.user {
+  @apply bg-[#dbeafe] text-[#1e3a8a] self-end;
+}
+
+.chat-input {
+    @apply flex border-t border-[#eee] pt-2;
+}
+  
+.input-field {
+    @apply flex-1 py-2 px-3 border border-[#ccc] rounded-xl mr-2 outline-none;
+}
+  
+
+.send-btn {
+    @apply bg-[#a0522d] text-white border-none rounded-xl py-2 px-3 cursor-pointer;
+}
+
+.function-btn {
+    @apply p-3 text-sm text-[#5a2b1f] bg-gradient-to-r from-[#fcefe2] to-[#f8d4d8] border-none rounded-2xl cursor-pointer shadow-md transition-all duration-300;
+  }
+
+.function-btn:hover {
+    @apply bg-gradient-to-r from-[#f8d4d8] to-[#e6d6f5] text-[#a0522d];
+}
+
+.functions {
+    @apply grid grid-cols-2 gap-2 p-4; /* 2열 2행 배치와 간격 추가 */
+}
+
+.intro-message {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding: 0 16px;
+  }
+  
+  .intro-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  
+  .intro-name {
+    margin-left: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    color: #d67aaa;
+  }
+ 
+
+  

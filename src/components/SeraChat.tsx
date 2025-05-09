@@ -8,22 +8,40 @@ interface SeraChatProps {
   goBack: () => void;
 }
 
+/* ➊ 메시지 타입 선언 ─ 선택적(?) 프로퍼티로 표시 */
+type ChatMessage = {
+  sender: string;
+  text:   string;
+  type?:  'intro' | 'text' | 'image';
+  image?: string;
+};
+
 export default function SeraChat({ goBack }: SeraChatProps) {
-  const [messages, setMessages] = useState([
+  /* ➋ 제네릭으로 타입 고정 */
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       sender: '세라',
-      type: 'intro', // 첫 인사 메시지
-      text: '안녕하세요!\n전 세라라고 해요.',
-      image: '/girl2.png',
+      type:   'intro',
+      text:   '안녕하세요!\n전 세라라고 해요.',
+      image:  '/girl2.png',
     },
   ]);
+
   const [input, setInput] = useState('');
 
   const handleSend = () => {
     if (!input.trim()) return;
-    setMessages([...messages, { sender: '나', text: input }]);
+
+    /* ➌ 새 메시지는 sender·text만 넣어도 OK */
+    setMessages(prev => [
+      ...prev,
+      { sender: '나', text: input, type: 'text' }   // image 없음 → 오류 X
+    ]);
+
     setInput('');
   };
+
+  /* --- 이하 JSX는 그대로 --- */
 
   return (
     <div className="flex flex-col h-screen bg-white">
@@ -99,11 +117,22 @@ export default function SeraChat({ goBack }: SeraChatProps) {
         </div>
 
         {/* 선택지 버튼 */}
-        <div className="mt-6 flex gap-2 justify-center">
-          {[1, 2, 3, 4].map((_, idx) => (
-            <div key={idx} className="w-12 h-4 rounded-lg bg-gray-300" />
-          ))}
+        <div className="flex flex-wrap gap-2">
+          {["앱/웹 아이디어", "IT 용어 쉽게 풀기", "유용한 앱 소개", "코딩 놀이"].map((text, idx) => (
+            <button
+              key={idx}
+              onClick={() =>
+              setMessages((prev) => [...prev, { sender: '나', text }])
+              }
+              className="px-3 py-1 bg-gray-200 rounded-full text-sm whitespace-nowrap hover:bg-gray-300 transition"
+              >
+              {text}
+            </button>
+            ))}
         </div>
+
+
+
       </div>
 
       {/* 입력창 */}
