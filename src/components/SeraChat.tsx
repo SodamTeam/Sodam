@@ -8,22 +8,40 @@ interface SeraChatProps {
   goBack: () => void;
 }
 
+/* ➊ 메시지 타입 선언 ─ 선택적(?) 프로퍼티로 표시 */
+type ChatMessage = {
+  sender: string;
+  text:   string;
+  type?:  'intro' | 'text' | 'image';
+  image?: string;
+};
+
 export default function SeraChat({ goBack }: SeraChatProps) {
-  const [messages, setMessages] = useState([
+  /* ➋ 제네릭으로 타입 고정 */
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       sender: '세라',
-      type: 'intro', // 첫 인사 메시지
-      text: '안녕하세요!\n전 세라라고 해요.',
-      image: '/girl2.png',
+      type:   'intro',
+      text:   '안녕하세요!\n전 세라라고 해요.',
+      image:  '/girl2.png',
     },
   ]);
+
   const [input, setInput] = useState('');
 
   const handleSend = () => {
     if (!input.trim()) return;
-    setMessages([...messages, { sender: '나', text: input }]);
+
+    /* ➌ 새 메시지는 sender·text만 넣어도 OK */
+    setMessages(prev => [
+      ...prev,
+      { sender: '나', text: input, type: 'text' }   // image 없음 → 오류 X
+    ]);
+
     setInput('');
   };
+
+  /* --- 이하 JSX는 그대로 --- */
 
   return (
     <div className="flex flex-col h-screen bg-white">
