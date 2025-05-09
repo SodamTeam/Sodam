@@ -36,7 +36,27 @@ export default function MainScreen() {
         <div className="w-36 h-36 left-[13.64px] top-[40.04px] absolute rounded-[10px]" />
         <div className="left-[35.16px] top-[20.21px] absolute justify-start text-black text-base font-bold font-['Inter']">AI 챗봇 선택</div>
     </div>
-    <div className="w-96 h-96 left-[7px] top-[304px] absolute bg-Grays-Gray-3 rounded-[34.42px]" />
+    <div className="w-96 h-96 left-[7px] top-[304px] absolute bg-Grays-Gray-3 rounded-[34.42px] border border-green-500 overflow-hidden">
+  {/* 캐릭터 이미지 및 텍스트 */}
+  <div className="relative w-full h-full p-4">
+    {/* 캐릭터 이미지 */}
+    <div className="absolute left-4 top-16">
+      <img 
+        src="https://placehold.co/120x140" 
+        alt="문학소녀 하린" 
+        className="w-30 h-36 rounded-full"
+      />
+    </div>
+    
+    {/* 캐릭터 이름 및 설명 */}
+    <div className="absolute right-10 top-10 bg-blue-200 rounded-3xl shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)]">
+      <div className="w-32 h-6 left-2 top-4 absolute justify-start">
+        <span className="text-black text-[10px] font-bold font-['Inter']">📖</span>
+        <span className="text-black text-[8px] font-bold font-['Inter']}"> - 문학소녀 미소녀 하린</span>
+      </div>
+    </div>
+  </div>
+</div>
     <div className="w-80 h-12 left-[19px] top-[314px] absolute bg-Grays-Gray-3">
         <div className="w-28 h-14 left-[65.05px] top-[3.01px] absolute bg-blue-200 rounded-3xl shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)]" />
         <div className="w-10 h-9 left-[9px] top-[8px] absolute rounded-full">
