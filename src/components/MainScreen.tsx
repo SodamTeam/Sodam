@@ -7,6 +7,9 @@ import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
 import '../app/animations.css';
 import SeraChat from './SeraChat';
+import EmotionDiary from './EmotionDiary';
+import MeditationContent from './MeditationContent';
+import EncouragementGenerator from './EncouragementGenerator';
 
 export default function Home() {
   const [page, setPage] = useState(1);
@@ -36,6 +39,9 @@ export default function Home() {
         'IT 용어 쉽게 풀기',
         '유용한 앱 소개',
         '코딩 놀이'
+      ],
+      actions: [
+        { label: '세라와 채팅 시작하기', page: 3 }
       ]
     },
     {
@@ -48,6 +54,11 @@ export default function Home() {
         '릴렉스 콘텐츠',
         '응원 메시지 생성기',
         '편안한 대화 & 상담'
+      ],
+      actions: [
+        { label: '감정일기 작성 도우미', page: 4 },
+        { label: '릴렉스 콘텐츠', page: 5 },
+        { label: '응원 메시지 생성기', page: 6 }
       ]
     },
     {
@@ -64,9 +75,11 @@ export default function Home() {
     },
   ];
 
-  if (page === 3) {
-    return <SeraChat goBack={() => setPage(2)} />;
-  }
+  if (page === 3) return <SeraChat goBack={() => setPage(2)} />;
+  if (page === 4) return <EmotionDiary goBack={() => setPage(2)}/>;
+  if (page === 5) return <MeditationContent goBack={() => setPage(2)} />;
+  if (page === 6) return <EncouragementGenerator goBack={() => setPage(2)} />;
+  
 
   if (page === 1) {
     return (
@@ -131,14 +144,15 @@ export default function Home() {
                         </li>
                       ))}
                     </ul>
-                    {slide.id === 2 && (
+                    {slide.actions?.map((action, i) => (
                       <button
-                        onClick={() => setPage(3)}
-                        className="mt-auto bg-white text-black font-medium py-2 px-4 rounded-full hover:bg-gray-200 transition"
+                        key={i}
+                        onClick={() => setPage(action.page)}
+                        className="mt-1 bg-white text-black font-medium py-2 px-4 rounded-full hover:bg-gray-200 transition"
                       >
-                        세라와 채팅 시작하기
+                        {action.label}
                       </button>
-                    )}
+                    ))}
                   </div>
                 )}
               </div>
