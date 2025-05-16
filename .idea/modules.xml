@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Sodam.iml" filepath="$PROJECT_DIR$/.idea/Sodam.iml" />
+      <module fileurl="file://$PROJECT_DIR$/sodam_flutter.iml" filepath="$PROJECT_DIR$/sodam_flutter.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/sodam_flutter_android.iml" filepath="$PROJECT_DIR$/android/sodam_flutter_android.iml" />
     </modules>
   </component>
 </project>
