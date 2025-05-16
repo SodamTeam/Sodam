@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.chat_service import router as chat_router
+from app.profile_service import router as profile_router
 
 app = FastAPI()
 
@@ -14,6 +15,7 @@ app.add_middleware(
 
 # chat_service.py에 정의한 router 등록
 app.include_router(chat_router, prefix="/api/generate")
+app.include_router(profile_router, prefix="/api/profile")
 
 @app.get("/health")
 async def health_check():
