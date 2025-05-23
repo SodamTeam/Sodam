@@ -1,5 +1,7 @@
+//harin_chat.dart
 import 'package:flutter/material.dart';
-import 'chat_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'profile_service.dart';
 
 class HarinChat extends StatefulWidget {
@@ -13,7 +15,6 @@ class HarinChat extends StatefulWidget {
 class _HarinChatState extends State<HarinChat> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ChatService chatService = ChatService();
 
   List<Map<String, String>> messages = [
     {
@@ -27,6 +28,59 @@ class _HarinChatState extends State<HarinChat> {
 
   final String systemPrompt = ProfileService.getProfile('harin');
 
+  final Map<String, String> modeLabels = {
+    'novel-helper': '소설 작성 도우미',
+    'literary-analysis': '문학 분석',
+    'poetry-play': '시 쓰기 놀이',
+    'book-recommendation': '독서 추천 & 기록',
+    'default': '기본',
+  };
+
+  // gateway를 통한 경로로 변경
+  String get _baseUrl => 'http://localhost:8000/api/chat/generate';
+
+  Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
+    try {
+      final url = Uri.parse(_baseUrl);
+      final body = {
+        "model": "gemma3:4b",
+        "prompt": prompt,
+        "stream": false,
+      };
+
+      if (systemPrompt != null && systemPrompt.isNotEmpty) {
+        body["system"] = systemPrompt;
+      }
+
+      if (mode != null && mode.isNotEmpty) {
+        body["mode"] = mode;
+      }
+
+      print('Sending request to: $url');
+      print('Request body: $body');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print("LLM 응답 원본: $data");
+        return data['response'] ?? '응답을 이해하지 못했어요.';
+      } else {
+        return 'AI 서버 오류: ${response.statusCode}';
+      }
+    } catch (e) {
+      print('Error occurred: $e');
+      return 'AI 연결 실패: $e';
+    }
+  }
+
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
@@ -36,12 +90,16 @@ class _HarinChatState extends State<HarinChat> {
       _isLoading = true;
     });
 
-    final reply = await chatService.generate(input, systemPrompt: systemPrompt);
+    final reply = await _generateResponse(
+      input,
+      systemPrompt: systemPrompt,
+      mode: mode == 'book-recommendation' ? 'book' : mode,
+    );
 
     setState(() {
       messages.add({'sender': 'harin', 'text': reply});
       _isLoading = false;
-    }); 
+    });
     _scrollToBottom();
   }
 
@@ -57,31 +115,35 @@ class _HarinChatState extends State<HarinChat> {
     });
   }
 
-  String _generateHarinReply(String userText, String currentMode) {
-    switch (currentMode) {
-      case 'novel-helper':
-        return '소설을 작성하는 데 도움이 필요하군요! 어떤 아이디어를 생각하고 계신가요?';
-      case 'literary-analysis':
-        return '문학 분석을 시작해볼까요? 어떤 작품을 분석할까요?';
-      case 'poetry-play':
-        return '시를 쓰는 놀이가 시작되었습니다! 어떤 주제로 시를 써볼까요?';
-      case 'book-recommendation':
-        return '책을 추천해드릴게요! 어떤 장르의 책을 원하시나요?';
-      default:
-        return '그 이야기도 참 멋지네요. 조금 더 들려주시겠어요? 🌷';
-    }
-  }
-
-  void _changeMode(String newMode) {
+  void _changeMode(String newMode) async {
     setState(() {
       mode = newMode;
       messages = [
         {
           'sender': 'harin',
-          'text': '현재 모드는 $newMode입니다. 이 모드에 대해 이야기해볼까요?',
+          'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
         }
       ];
     });
+
+    if (newMode == 'book-recommendation') {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final reply = await _generateResponse(
+        "감동적인 책",
+        systemPrompt: systemPrompt,
+        mode: "book",
+      );
+
+      setState(() {
+        messages.add({'sender': 'harin', 'text': reply});
+        _isLoading = false;
+      });
+
+      _scrollToBottom();
+    }
   }
 
   @override
@@ -127,7 +189,7 @@ class _HarinChatState extends State<HarinChat> {
                 ],
               ),
             ),
-            // 채팅 헤더(프로필)
+            // 채팅 헤더
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               child: Row(
@@ -186,19 +248,19 @@ class _HarinChatState extends State<HarinChat> {
                 runSpacing: 8,
                 children: [
                   ElevatedButton(
-                    onPressed: () => _changeMode('novel-helper'),
+                    onPressed: _isLoading ? null : () => _changeMode('novel-helper'),
                     child: const Text('📝 소설 작성 도우미'),
                   ),
                   ElevatedButton(
-                    onPressed: () => _changeMode('literary-analysis'),
+                    onPressed: _isLoading ? null : () => _changeMode('literary-analysis'),
                     child: const Text('📘 문학 분석'),
                   ),
                   ElevatedButton(
-                    onPressed: () => _changeMode('poetry-play'),
+                    onPressed: _isLoading ? null : () => _changeMode('poetry-play'),
                     child: const Text('📄 시 쓰기 놀이'),
                   ),
                   ElevatedButton(
-                    onPressed: () => _changeMode('book-recommendation'),
+                    onPressed: _isLoading ? null : () => _changeMode('book-recommendation'),
                     child: const Text('📚 독서 추천 & 기록'),
                   ),
                 ],
@@ -218,6 +280,7 @@ class _HarinChatState extends State<HarinChat> {
                     child: TextField(
                       controller: _controller,
                       onSubmitted: (_) => _sendMessage(),
+                      enabled: !_isLoading,
                       decoration: const InputDecoration(
                         hintText: '메시지를 입력하세요...',
                         border: OutlineInputBorder(
@@ -229,7 +292,7 @@ class _HarinChatState extends State<HarinChat> {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _sendMessage,
+                    onPressed: _isLoading ? null : _sendMessage,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.purple,
                       foregroundColor: Colors.white,
@@ -243,7 +306,7 @@ class _HarinChatState extends State<HarinChat> {
                 ],
               ),
             ),
-            // 하단 네비게이션 (예시)
+            // 하단 네비게이션
             Container(
               height: 56,
               decoration: const BoxDecoration(
