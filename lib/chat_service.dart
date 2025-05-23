@@ -13,11 +13,7 @@ class ChatService {
   Future<String> generate(String prompt, {String? systemPrompt}) async {
     try {
       final url = Uri.parse(baseUrl);
-      final body = {
-        "model": model,
-        "prompt": prompt,
-        "stream": false,
-      };
+      final body = {"model": model, "prompt": prompt, "stream": false};
       if (systemPrompt != null && systemPrompt.isNotEmpty) {
         body["system"] = systemPrompt;
       }
