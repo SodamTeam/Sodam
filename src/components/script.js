@@ -4,8 +4,6 @@ const nextBtn = document.querySelector('.next');
 let currentIndex = 0;
 
 
-
-
 window.onload = () => {
     typeGreeting();
 };
