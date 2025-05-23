@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import httpx
 import os
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemma3:4b")
 
 GOOGLE_BOOKS_API = "https://www.googleapis.com/books/v1/volumes"
 
-@router.post("", response_model=GenerateResponse)
+@router.post("")
 async def generate(req: GenerateRequest):
     """
     POST /api/generate
@@ -31,31 +32,6 @@ async def generate(req: GenerateRequest):
       system?: str
     }
     """
-    payload: dict = {
-        "model": DEFAULT_MODEL,
-        "prompt": req.prompt,
-        "stream": False,
-    }
-    if req.system:
-        payload["system"] = req.system
-
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(LLM_SERVICE_URL, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPError as e:
-        # LLM 서비스 호출에 실패했을 때
-        raise HTTPException(status_code=502, detail=f"AI 연결 실패: {str(e)}")
-    except Exception as e:
-        # 기타 예외 상황
-        raise HTTPException(status_code=500, detail=f"AI 서버 오류: {str(e)}")
-
-    # LLM 서비스가 반환한 응답 구조에 맞춰서 처리
-    result = data.get("response")
-    if not result:
-        return GenerateResponse(response="응답을 이해하지 못했어요.")
-    return GenerateResponse(response=result)
     try:
         if req.mode == "book":
             if not req.prompt:
@@ -76,7 +52,10 @@ async def generate(req: GenerateRequest):
                 data = resp.json()
                 books = data.get("items", [])
                 if not books:
-                    return GenerateResponse(response="추천할 책이 없습니다.")
+                    return JSONResponse(
+                        content={"response": "추천할 책이 없습니다."},
+                        media_type="application/json; charset=utf-8"
+                    )
 
                 results = []
                 for book in books:
@@ -86,13 +65,39 @@ async def generate(req: GenerateRequest):
                     desc = info.get("description", "설명이 없습니다.")
                     results.append(f"📚 제목: {title}\n👤 저자: {authors}\n📝 소개: {desc[:100]}...\n")
 
-                return GenerateResponse(response="\n\n".join(results))
+                return JSONResponse(
+                    content={"response": "\n\n".join(results)},
+                    media_type="application/json; charset=utf-8"
+                )
         
-        # GPT 응답 처리 (기존 로직)
-        else:
-            final_prompt = req.prompt or "기본 프롬프트"
-            result = f"모드 '{req.mode}'에 따라 생성한 응답: '{final_prompt}'"
-            return GenerateResponse(response=result)
+        # LLM 서비스 호출
+        payload = {
+            "model": req.model or DEFAULT_MODEL,
+            "prompt": req.prompt,
+            "stream": req.stream,
+        }
+        if req.system:
+            payload["system"] = req.system
 
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(LLM_SERVICE_URL, json=payload)
+            resp.encoding = 'utf-8'
+            data = resp.json()
+
+        result = data.get("response")
+        if not result:
+            return JSONResponse(
+                content={"response": "응답을 이해하지 못했어요."},
+                media_type="application/json; charset=utf-8"
+            )
+        return JSONResponse(
+            content={"response": result},
+            media_type="application/json; charset=utf-8"
+        )
+
+    except httpx.HTTPError as e:
+        # LLM 서비스 호출에 실패했을 때
+        raise HTTPException(status_code=502, detail=f"AI 연결 실패: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"서버 오류: {e}")
+        # 기타 예외 상황
+        raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")

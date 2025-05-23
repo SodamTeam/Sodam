@@ -1,6 +1,7 @@
 //harin_chat.dart
 import 'package:flutter/material.dart';
-import 'chat_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'profile_service.dart';
 
 class HarinChat extends StatefulWidget {
@@ -14,7 +15,6 @@ class HarinChat extends StatefulWidget {
 class _HarinChatState extends State<HarinChat> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ChatService chatService = ChatService();
 
   List<Map<String, String>> messages = [
     {
@@ -36,6 +36,51 @@ class _HarinChatState extends State<HarinChat> {
     'default': '기본',
   };
 
+  // gateway를 통한 경로로 변경
+  String get _baseUrl => 'http://localhost:8000/api/chat/generate';
+
+  Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
+    try {
+      final url = Uri.parse(_baseUrl);
+      final body = {
+        "model": "gemma3:4b",
+        "prompt": prompt,
+        "stream": false,
+      };
+
+      if (systemPrompt != null && systemPrompt.isNotEmpty) {
+        body["system"] = systemPrompt;
+      }
+
+      if (mode != null && mode.isNotEmpty) {
+        body["mode"] = mode;
+      }
+
+      print('Sending request to: $url');
+      print('Request body: $body');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print("LLM 응답 원본: $data");
+        return data['response'] ?? '응답을 이해하지 못했어요.';
+      } else {
+        return 'AI 서버 오류: ${response.statusCode}';
+      }
+    } catch (e) {
+      print('Error occurred: $e');
+      return 'AI 연결 실패: $e';
+    }
+  }
+
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
@@ -45,7 +90,7 @@ class _HarinChatState extends State<HarinChat> {
       _isLoading = true;
     });
 
-    final reply = await chatService.generate(
+    final reply = await _generateResponse(
       input,
       systemPrompt: systemPrompt,
       mode: mode == 'book-recommendation' ? 'book' : mode,
@@ -86,7 +131,7 @@ class _HarinChatState extends State<HarinChat> {
         _isLoading = true;
       });
 
-      final reply = await chatService.generate(
+      final reply = await _generateResponse(
         "감동적인 책",
         systemPrompt: systemPrompt,
         mode: "book",
