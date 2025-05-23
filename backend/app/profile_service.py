@@ -32,7 +32,5 @@ async def get_profile(character: str):
     특정 캐릭터의 시스템 프롬프트(프로필) 반환
     GET /api/profile/{character}
     """
-    prompt = profiles.get(character)
-    if prompt:
-        return ProfileResponse(prompt=prompt)
-    raise HTTPException(status_code=404, detail="해당 캐릭터를 찾을 수 없어요.")
+    prompt = profiles.get(character, '')
+    return ProfileResponse(prompt=prompt)

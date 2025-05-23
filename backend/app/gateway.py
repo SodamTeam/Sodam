@@ -15,12 +15,12 @@ app.add_middleware(
 
 # 각 서비스 베이스 URL (Docker Compose 등에서 서비스 이름으로 호출 가능)
 SERVICE_URLS = {
-    "auth":   "http://auth-service:8001",
-    "profile":"http://profile-service:8002",
-    "chat":   "http://chat-service:8003",
-    "image":  "http://image-service:8004",
-    "music":  "http://music-service:8005",
-    "diary":  "http://diary-service:8006",
+    "chat":   "http://localhost:8001",
+    "profile":"http://localhost:8002",
+    "auth":   "http://localhost:8003",
+    "image":  "http://localhost:8004",
+    "music":  "http://localhost:8005",
+    "diary":  "http://localhost:8006",
 }
 
 # 공통 유틸: downstream 호출

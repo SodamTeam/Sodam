@@ -29,18 +29,19 @@ class _SeraChatState extends State<SeraChat> {
   final String systemPrompt = ProfileService.getProfile('sera');
 
   void _handleSend() async {
-    if (_textController.text.trim().isEmpty || _isLoading) return;
+    final input = _textController.text.trim();
+    if (input.isEmpty || _isLoading) return;
     
     setState(() {
       _messages.add({
         'sender': '나',
-        'text': _textController.text,
+        'text': input,
       });
       _textController.clear();
       _isLoading = true;
     });
 
-    final reply = await chatService.generate(_textController.text, systemPrompt: systemPrompt);
+    final reply = await chatService.generate(input, systemPrompt: systemPrompt);
 
     setState(() {
       _messages.add({
@@ -178,6 +179,7 @@ class _SeraChatState extends State<SeraChat> {
                         'text': text,
                       });
                     });
+                    _handleSend();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[200],
