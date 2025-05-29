@@ -1,14 +1,33 @@
-// lib/screens/intro_screen.dart
-
+// Sodam/lib/screens/intro_screen.dart
 import 'package:flutter/material.dart';
+import 'auth_service.dart';
 
-/// 인트로 화면 — 아이콘과 원 사이 여백 제거
-class IntroScreen extends StatelessWidget {
+class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
 
-  static const String _title = '너무 친절하진 않아도,\n딱 너한테 맞는 대화. 그게 목표야';
+  @override
+  State<IntroScreen> createState() => _IntroScreenState();
+}
+
+class _IntroScreenState extends State<IntroScreen> {
+  static const String _title =
+      '너무 친절하진 않아도,\n딱 너한테 맞는 대화. 그게 목표야';
   static const String _bgImage = 'assets/introback.png';
   static const String _iconImage = 'assets/introicon.png';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLogin();
+  }
+
+  Future<void> _checkLogin() async {
+  final loggedIn = await AuthService.isLoggedIn();
+  if (!mounted) return;
+  if (loggedIn) {
+    Navigator.pushReplacementNamed(context, '/home');
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +38,7 @@ class IntroScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // ─── 상단 배경 (55%) ───
+            /// ─── 상단 배경 (55%) ───
             SizedBox(
               height: size.height * 0.55,
               width: double.infinity,
@@ -32,7 +51,7 @@ class IntroScreen extends StatelessWidget {
               ),
             ),
 
-            // ─── 아이콘 (Transform 으로 겹치기) ───
+            /// ─── 아이콘 ───
             Transform.translate(
               offset: const Offset(0, -28),
               child: Container(
@@ -51,7 +70,7 @@ class IntroScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ─── 타이틀 ───
+            /// ─── 타이틀 ───
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
@@ -67,7 +86,7 @@ class IntroScreen extends StatelessWidget {
 
             const SizedBox(height: 40),
 
-            // ─── 버튼 ───
+            /// ─── 버튼 ───
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
@@ -94,7 +113,9 @@ class IntroScreen extends StatelessWidget {
 
 class _PrimaryButton extends StatelessWidget {
   const _PrimaryButton({required this.text, required this.onPressed});
-  final String text;  final VoidCallback onPressed;
+  final String text;
+  final VoidCallback onPressed;
+
   @override
   Widget build(BuildContext context) => SizedBox(
         width: double.infinity,
@@ -103,17 +124,22 @@ class _PrimaryButton extends StatelessWidget {
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF1DB954),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
             elevation: 0,
           ),
-          child: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          child: Text(text,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ),
       );
 }
 
 class _SecondaryButton extends StatelessWidget {
   const _SecondaryButton({required this.text, required this.onPressed});
-  final String text; final VoidCallback onPressed;
+  final String text;
+  final VoidCallback onPressed;
+
   @override
   Widget build(BuildContext context) => SizedBox(
         width: double.infinity,
@@ -123,9 +149,12 @@ class _SecondaryButton extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.black,
             side: const BorderSide(color: Colors.black, width: 1),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
           ),
-          child: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          child: Text(text,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ),
       );
 }

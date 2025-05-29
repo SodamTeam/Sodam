@@ -1,20 +1,48 @@
+// Sodam/lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
+import 'auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
+
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _usernameCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _pwCtrl = TextEditingController();
   bool _obscure = true;
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _pwCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _doLogin() async {
+    setState(() => _loading = true);
+    final email = _emailCtrl.text.trim();
+    final pw = _pwCtrl.text;
+
+    final msg = await AuthService.login(email, pw);
+    setState(() => _loading = false);
+
+    print(msg);
+    if (msg == null && mounted) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(msg!)));
+    }
+  }
 
   @override
   Widget build(BuildContext ctx) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -26,25 +54,25 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           children: [
             TextFormField(
-              controller: _usernameCtrl,
+              controller: _emailCtrl,
               decoration: const InputDecoration(
                 hintText: '아이디(이메일)',
-                prefixIcon: Icon(Icons.person),
+                prefixIcon: Icon(Icons.email),
+                border: OutlineInputBorder(),
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
             TextFormField(
-              controller: _passwordCtrl,
+              controller: _pwCtrl,
               obscureText: _obscure,
               decoration: InputDecoration(
                 hintText: '비밀번호',
                 prefixIcon: const Icon(Icons.lock),
+                border: const OutlineInputBorder(),
                 filled: true,
                 fillColor: Colors.white,
-                border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscure ? Icons.visibility_off : Icons.visibility,
@@ -59,16 +87,17 @@ class _LoginScreenState extends State<LoginScreen> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
+                onPressed: _loading ? null : _doLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00C566),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                   ),
                 ),
-                onPressed: () {
-                  // TODO: 로그인 API 호출
-                },
-                child: const Text('로그인', style: TextStyle(color: Colors.white)),
+                child: _loading
+                    ? const CircularProgressIndicator(strokeWidth: 2)
+                    : const Text('로그인',
+                        style: TextStyle(color: Colors.white)),
               ),
             ),
           ],
