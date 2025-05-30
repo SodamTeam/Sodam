@@ -9,9 +9,11 @@ class AuthService {
   /// Android 에뮬레이터를 지원하기 위해 기본값은 10.0.2.2
   /// 배포 시 --dart-define=BACKEND_URL=https://api.example.com 형태로 덮어쓸 수 있음.
   static const String _baseUrl = String.fromEnvironment(
-  'BACKEND_URL',
-  defaultValue: kIsWeb ? 'http://127.0.0.1:8000' : 'http://10.0.2.2:8000',
-);
+    'BACKEND_URL',
+    defaultValue: kIsWeb 
+      ? 'http://127.0.0.1:8003'     // 웹 디버깅일 때
+      : 'http://10.0.2.2:8003',      // Android emulator 디버깅일 때
+  );
 
   static final FlutterSecureStorage _storage = FlutterSecureStorage();
 
@@ -22,7 +24,7 @@ class AuthService {
   static Future<String?> login(String email, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/login'),
+        Uri.parse('$_baseUrl/api/auth/login'),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {'username': email, 'password': password},
       );
@@ -46,7 +48,7 @@ class AuthService {
   static Future<String?> signup(String email, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/signup'),
+        Uri.parse('$_baseUrl/api/auth/signup'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
