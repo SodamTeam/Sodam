@@ -6,6 +6,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 포트 설정 (기본값: 8001)
+const PORT = process.env.PORT || 8001;
+
 // MySQL 연결 설정
 const dbConfig = {
   host: 'localhost',
@@ -51,4 +54,4 @@ app.get('/api/chat/history/:sessionId', async (req, res) => {
   res.json(rows);
 });
 
-app.listen(3000, () => console.log('Server running on http://localhost:3000'));
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

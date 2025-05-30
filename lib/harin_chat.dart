@@ -37,7 +37,7 @@ class _HarinChatState extends State<HarinChat> {
   };
 
   // gateway를 통한 경로로 변경
-  String get _baseUrl => 'http://localhost:8000/api/chat/generate';
+  String get _baseUrl => 'http://localhost:8003/api/generate';
 
   Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
     try {

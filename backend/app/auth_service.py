@@ -5,9 +5,9 @@ from passlib.context import CryptContext
 from jose import jwt
 import datetime
 
-from database import SessionLocal, engine, Base
-from models import User
-from schemas import UserCreate, UserOut, Token
+from .database import SessionLocal, engine, Base
+from .models import User
+from .schemas import UserCreate, UserOut, Token
 
 # 설정
 SECRET_KEY = "change_this_secret"

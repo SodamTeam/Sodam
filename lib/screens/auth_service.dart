@@ -26,7 +26,11 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$_baseUrl/api/auth/login'),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: {'username': email, 'password': password},
+        body: {
+          'username': email,
+          'password': password,
+          'grant_type': 'password',
+        },
       );
 
       if (response.statusCode == 200) {
