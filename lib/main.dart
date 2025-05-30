@@ -1,9 +1,9 @@
 // Sodam/lib/main.dart
 
 import 'package:flutter/material.dart';
-import 'screens/intro_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/signup_screen.dart';
+import 'auth_services/intro_screen.dart';
+import 'auth_services/login_screen.dart';
+import 'auth_services/signup_screen.dart';
 import 'mainScreen.dart';
 
 void main() => runApp(const MyApp());
