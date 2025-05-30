@@ -18,7 +18,7 @@ class _SeraChatState extends State<SeraChat> {
   final ScrollController _scrollController = ScrollController();
   final ChatService chatService = ChatService();
 
-  List<Map<String, dynamic>> _messages = [
+  final List<Map<String, dynamic>> _messages = [
     {
       'sender': '세라',
       'type': 'intro',
@@ -33,12 +33,9 @@ class _SeraChatState extends State<SeraChat> {
   void _handleSend() async {
     final input = _textController.text.trim();
     if (input.isEmpty || _isLoading) return;
-    
+
     setState(() {
-      _messages.add({
-        'sender': '나',
-        'text': input,
-      });
+      _messages.add({'sender': '나', 'text': input});
       _textController.clear();
       _isLoading = true;
     });
@@ -46,10 +43,7 @@ class _SeraChatState extends State<SeraChat> {
     final reply = await chatService.generate(input, systemPrompt: systemPrompt);
 
     setState(() {
-      _messages.add({
-        'sender': '세라',
-        'text': reply,
-      });
+      _messages.add({'sender': '세라', 'text': reply});
       _isLoading = false;
     });
     _scrollToBottom();
@@ -78,9 +72,7 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey),
-                ),
+                border: Border(bottom: BorderSide(color: Colors.grey)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -91,10 +83,7 @@ class _SeraChatState extends State<SeraChat> {
                   ),
                   const Text(
                     '세라',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                   Row(
                     children: [
@@ -124,7 +113,10 @@ class _SeraChatState extends State<SeraChat> {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 24),
                     child: Row(
-                      mainAxisAlignment: isSera ? MainAxisAlignment.start : MainAxisAlignment.end,
+                      mainAxisAlignment:
+                          isSera
+                              ? MainAxisAlignment.start
+                              : MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (isSera) ...[
@@ -135,7 +127,9 @@ class _SeraChatState extends State<SeraChat> {
                                 children: [
                                   const CircleAvatar(
                                     radius: 14,
-                                    backgroundImage: AssetImage('assets/girl2_icon.png'),
+                                    backgroundImage: AssetImage(
+                                      'assets/girl2_icon.png',
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
                                   const Text(
@@ -168,30 +162,27 @@ class _SeraChatState extends State<SeraChat> {
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [
-                  "앱/웹 아이디어",
-                  "IT 용어 쉽게 풀기",
-                  "유용한 앱 소개",
-                  "코딩 놀이",
-                ].map((text) => ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _messages.add({
-                        'sender': '나',
-                        'text': text,
-                      });
-                    });
-                    _handleSend();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[200],
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: Text(text),
-                )).toList(),
+                children:
+                    ["앱/웹 아이디어", "IT 용어 쉽게 풀기", "유용한 앱 소개", "코딩 놀이"]
+                        .map(
+                          (text) => ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _messages.add({'sender': '나', 'text': text});
+                              });
+                              _handleSend();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[200],
+                              foregroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                            child: Text(text),
+                          ),
+                        )
+                        .toList(),
               ),
             ),
 
@@ -199,9 +190,7 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey)),
               ),
               child: Row(
                 children: [
@@ -248,29 +237,24 @@ class _SeraChatState extends State<SeraChat> {
 
   Widget _buildBubble(Map<String, dynamic> msg, {required bool isSera}) {
     return Container(
-      constraints: const BoxConstraints(
-        maxWidth: 250,
-      ),
+      constraints: const BoxConstraints(maxWidth: 250),
       decoration: BoxDecoration(
         color: isSera ? Colors.white : Colors.purple[100],
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(12),
-      child: msg['type'] == 'intro' && msg['image'] != null
-          ? Column(
-              children: [
-                Text(msg['text'].split('\n')[0]),
-                const SizedBox(height: 8),
-                Image.asset(
-                  msg['image'],
-                  width: 180,
-                  height: 180,
-                ),
-                const SizedBox(height: 8),
-                Text(msg['text'].split('\n')[1]),
-              ],
-            )
-          : Text(msg['text']),
+      child:
+          msg['type'] == 'intro' && msg['image'] != null
+              ? Column(
+                children: [
+                  Text(msg['text'].split('\n')[0]),
+                  const SizedBox(height: 8),
+                  Image.asset(msg['image'], width: 180, height: 180),
+                  const SizedBox(height: 8),
+                  Text(msg['text'].split('\n')[1]),
+                ],
+              )
+              : Text(msg['text']),
     );
   }
-} 
+}
