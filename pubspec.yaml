@@ -36,14 +36,21 @@ dependencies:
   cupertino_icons: ^1.0.2
   carousel_slider: ^5.0.0
   sqflite: ^2.0.0+4
+  path_provider: ^2.0.11
+  pati: ^1.8.0
   drift: ^2.7.0
   drift_sqflite: ^2.0.0
-  path_provider: ^2.0.0 
+  path_provider: ^2.0.00 
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
   http: ^1.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  hive_generator: ^2.0.0
+  build_runner: ^2.4.6
+  
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

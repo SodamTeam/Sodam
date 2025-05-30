@@ -2,9 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 import 'chat_service.dart';
 import 'profile_service.dart';
 
@@ -22,7 +19,6 @@ class _YuriChatState extends State<YuriChat> {
   final FocusNode _textFieldFocus = FocusNode();
   final ChatService chatService = ChatService();
 
-  Database? _db; // SQLite 데이터베이스
   List<Map<String, String>> messages = [
     {'sender': 'yuri', 'text': '안녕하세요, 저는 유리입니다 🌸\n오늘은 어떤 이야기를 나눠볼까요?'},
   ];
@@ -31,51 +27,31 @@ class _YuriChatState extends State<YuriChat> {
   final String systemPrompt = ProfileService.getProfile('yuri');
 
   @override
-  void initState() {
-    super.initState();
-    _initializeChatHistory(); // SQLite 초기화 및 메시지 로드
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    _textFieldFocus.dispose();
+    super.dispose();
   }
 
-  // SQLite 데이터베이스 초기화 및 과거 메시지 불러오기
-  Future<void> _initializeChatHistory() async {
-    try {
-      final docsDir = await getApplicationDocumentsDirectory();
-      final path = join(docsDir.path, 'chat.db');
-      _db = await openDatabase(
-        path,
-        version: 1,
-        onCreate: (db, version) async {
-          await db.execute('''
-            CREATE TABLE chat_history(
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              sender TEXT NOT NULL,
-              message TEXT NOT NULL,
-              created_at TEXT
-            )
-          ''');
-        },
-      );
+  void _sendMessage() async {
+    final input = _controller.text.trim();
+    if (input.isEmpty || _isLoading) return;
 
-      final List<Map<String, Object?>> results = await _db!.query(
-        'chat_history',
-        orderBy: 'id ASC',
-      );
-      final history =
-          results
-              .map(
-                (row) => {
-                  'sender': row['sender'] as String,
-                  'text': row['message'] as String,
-                },
-              )
-              .toList();
-      if (history.isNotEmpty) {
-        setState(() => messages = history);
-        _scrollToBottom();
-      }
-    } catch (e) {
-      debugPrint('SQLite init error: \$e');
-    }
+    setState(() {
+      messages.add({'sender': 'user', 'text': input});
+      _controller.clear();
+      _isLoading = true;
+    });
+    _scrollToBottom();
+
+    final reply = await chatService.generate(input, systemPrompt: systemPrompt);
+
+    setState(() {
+      messages.add({'sender': 'yuri', 'text': reply});
+      _isLoading = false;
+    });
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -84,52 +60,6 @@ class _YuriChatState extends State<YuriChat> {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
-  }
-
-  // 메시지 전송 및 SQLite 저장
-  Future<void> _sendMessage() async {
-    final input = _controller.text.trim();
-    if (input.isEmpty || _isLoading) return;
-
-    // 1) 사용자 메시지 UI 반영
-    setState(() {
-      messages.add({'sender': 'user', 'text': input});
-      _controller.clear();
-      _isLoading = true;
-    });
-    _scrollToBottom();
-
-    // 2) SQLite에 사용자 메시지 저장
-    try {
-      await _db?.insert('chat_history', {
-        'sender': 'user',
-        'message': input,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('SQLite insert user error: \$e');
-    }
-
-    // 3) AI 서버 호출
-    final reply = await chatService.generate(input, systemPrompt: systemPrompt);
-
-    // 4) AI 응답 UI 반영
-    setState(() {
-      messages.add({'sender': 'yuri', 'text': reply});
-      _isLoading = false;
-    });
-    _scrollToBottom();
-
-    // 5) SQLite에 AI 응답 저장
-    try {
-      await _db?.insert('chat_history', {
-        'sender': 'yuri',
-        'message': reply,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('SQLite insert yuri error: \$e');
-    }
   }
 
   Widget _buildBubble(Map<String, String> msg) {
@@ -152,14 +82,6 @@ class _YuriChatState extends State<YuriChat> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _scrollController.dispose();
-    _textFieldFocus.dispose();
-    super.dispose();
   }
 
   @override
@@ -199,8 +121,7 @@ class _YuriChatState extends State<YuriChat> {
                 ],
               ),
             ),
-
-            // 프로필
+            // 채팅 프로필 (복원된 부분)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               child: Row(
@@ -221,7 +142,6 @@ class _YuriChatState extends State<YuriChat> {
                 ],
               ),
             ),
-
             // 메시지 리스트
             Expanded(
               child: ListView.builder(
@@ -234,7 +154,6 @@ class _YuriChatState extends State<YuriChat> {
                 itemBuilder: (_, idx) => _buildBubble(messages[idx]),
               ),
             ),
-
             // 기능 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -261,7 +180,6 @@ class _YuriChatState extends State<YuriChat> {
                 ],
               ),
             ),
-
             // 입력창
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

@@ -235,7 +235,7 @@ class _HomePageState extends State<HomePage> {
             },
           );
         }
-        ;
+        {}
         return const Scaffold(body: Center(child: Text("캐릭터를 선택해주세요.")));
     }
   }
