@@ -2,6 +2,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
+from fastapi.responses import JSONResponse, Response
 
 app = FastAPI(title="SODAM API Gateway")
 
@@ -23,13 +24,17 @@ SERVICE_URLS = {
     "diary":  "http://localhost:8006",
 }
 
-# 공통 유틸: downstream 호출
 async def proxy_request(method: str, url: str, **kwargs):
     async with httpx.AsyncClient() as client:
         resp = await client.request(method, url, **kwargs)
         if resp.status_code >= 400:
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
-        return resp.json()
+        # 응답을 그대로 전달 (이게 가장 안전)
+        return Response(
+            content=resp.content,
+            status_code=resp.status_code,
+            media_type=resp.headers.get("content-type")
+        )
 
 # 1) 로그인 요청 → Auth Service
 @app.post("/api/auth/login")
