@@ -1,5 +1,3 @@
-// Sodam/lib/screens/auth_service.dart
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -72,4 +70,4 @@ class AuthService {
   /// ───────────────────────────────── 로그아웃
   static Future<void> logout() async =>
       _storage.delete(key: 'access_token');
-}
+} 
