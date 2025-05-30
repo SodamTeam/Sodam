@@ -40,7 +40,6 @@ dependencies:
   pati: ^1.8.0
   drift: ^2.7.0
   drift_sqflite: ^2.0.0
-  path_provider: ^2.0.00 
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   http: ^1.3.0
