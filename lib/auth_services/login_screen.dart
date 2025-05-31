@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
             TextFormField(
               controller: _emailCtrl,
               decoration: const InputDecoration(
-                hintText: '아이디(이메일)',
+                hintText: '아이디',
                 prefixIcon: Icon(Icons.email),
                 border: OutlineInputBorder(),
                 filled: true,
