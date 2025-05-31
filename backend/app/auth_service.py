@@ -14,8 +14,12 @@ SECRET_KEY = "change_this_secret"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
-# bcrypt 해시 컨텍스트
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt 해시 컨텍스트 (버전 호환성 문제 해결)
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=12  # 기본 라운드 수 지정
+)
 
 # 테이블 생성
 Base.metadata.create_all(bind=engine)
