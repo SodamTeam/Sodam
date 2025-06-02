@@ -38,7 +38,7 @@ class _HarinChatState extends State<HarinChat> {
   };
 
   // gateway를 통한 경로로 변경
-  String get _baseUrl => 'http://192.168.46.163:8003/api/generate';  // 실제 안드로이드 기기용 IP
+  String get _baseUrl => 'http://localhost:8003/api/generate';  // 실제 안드로이드 기기용 IP
 
   Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
     try {
