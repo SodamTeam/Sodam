@@ -6,13 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'chat_service.dart';
 import 'profile_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class YuriChat extends StatefulWidget {
   final VoidCallback goBack;
-  const YuriChat({Key? key, required this.goBack}) : super(key: key);
+  const YuriChat({super.key, required this.goBack});
 
   @override
-  _YuriChatState createState() => _YuriChatState();
+  State<YuriChat> createState() => _YuriChatState();
 }
 
 class _YuriChatState extends State<YuriChat> {
@@ -22,32 +24,95 @@ class _YuriChatState extends State<YuriChat> {
   final ChatService chatService = ChatService();
 
   List<Map<String, String>> messages = [
-    {'sender': 'yuri', 'text': '안녕하세요, 저는 유리입니다 🌸\n오늘은 어떤 이야기를 나눠볼까요?'},
+    {
+      'sender': 'yuri',
+      'text': '안녕하세요! 저는 예술가 유리예요 🎨\n어떤 예술에 대해 이야기해볼까요?',
+    }
   ];
 
+  String mode = 'default';
   bool _isLoading = false;
-  final String systemPrompt = ProfileService.getProfile('yuri');
+  String systemPrompt = '';  // 초기값을 빈 문자열로 설정
+
+  final Map<String, String> modeLabels = {
+    'art-critic': '예술 비평',
+    'art-history': '예술사',
+    'art-technique': '기법 설명',
+    'art-inspiration': '영감 찾기',
+    'default': '기본',
+  };
+
+  String get _baseUrl => 'http://localhost:8003/api/chat/generate';  // gateway URL로 수정
 
   @override
-  void dispose() {
-    _controller.dispose();
-    _scrollController.dispose();
-    _textFieldFocus.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadProfile();  // 프로필 로드 함수 호출
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await ProfileService.getProfile('yuri');
+    setState(() {
+      systemPrompt = profile;
+    });
+  }
+
+  Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
+    try {
+      final url = Uri.parse(_baseUrl);
+      final body = {
+        "model": "gemma3:4b",
+        "prompt": prompt,
+        "stream": false,
+      };
+
+      if (systemPrompt != null && systemPrompt.isNotEmpty) {
+        body["system"] = systemPrompt;
+      }
+
+      if (mode != null && mode.isNotEmpty) {
+        body["mode"] = mode;
+      }
+
+      print('Sending request to: $url');
+      print('Request body: $body');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print("LLM 응답 원본: $data");
+        return data['response'] ?? '응답을 이해하지 못했어요.';
+      } else {
+        return 'AI 서버 오류: ${response.statusCode}';
+      }
+    } catch (e) {
+      print('Error occurred: $e');
+      return 'AI 연결 실패: $e';
+    }
   }
 
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
-
     setState(() {
       messages.add({'sender': 'user', 'text': input});
       _controller.clear();
       _isLoading = true;
     });
-    _scrollToBottom();
 
-    final reply = await chatService.generate(input, systemPrompt: systemPrompt);
+    final reply = await _generateResponse(
+      input,
+      systemPrompt: systemPrompt,
+      mode: mode,
+    );
 
     setState(() {
       messages.add({'sender': 'yuri', 'text': reply});
@@ -59,37 +124,71 @@ class _YuriChatState extends State<YuriChat> {
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
 
-  Widget _buildBubble(Map<String, String> msg) {
-    final isYuri = msg['sender'] == 'yuri';
-    return Align(
-      alignment: isYuri ? Alignment.centerLeft : Alignment.centerRight,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isYuri ? Colors.white : Colors.purple[100],
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          msg['text'] ?? '',
-          style: TextStyle(
-            color: isYuri ? Colors.black87 : Colors.deepPurple,
-            fontSize: 15,
-          ),
-        ),
-      ),
-    );
+  void _changeMode(String newMode) async {
+    setState(() {
+      mode = newMode;
+      messages = [
+        {
+          'sender': 'yuri',
+          'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
+        }
+      ];
+    });
+
+    String initialPrompt = '';
+    if (newMode == 'art-critic') {
+      initialPrompt = '예술 작품을 비평해줘!';
+    } else if (newMode == 'art-history') {
+      initialPrompt = '예술사에 대해 설명해줘!';
+    } else if (newMode == 'art-technique') {
+      initialPrompt = '예술 기법을 설명해줘!';
+    } else if (newMode == 'art-inspiration') {
+      initialPrompt = '예술적 영감을 찾아줘!';
+    } else {
+      initialPrompt = '';
+    }
+
+    if (initialPrompt.isNotEmpty) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final reply = await _generateResponse(
+        initialPrompt,
+        systemPrompt: systemPrompt,
+        mode: newMode,
+      );
+
+      setState(() {
+        messages.add({'sender': 'yuri', 'text': reply});
+        _isLoading = false;
+      });
+
+      _scrollToBottom();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    _textFieldFocus.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfff8f4fa),
+      backgroundColor: const Color(0xfff4f8fa),
       body: SafeArea(
         child: Column(
           children: [
@@ -97,7 +196,9 @@ class _YuriChatState extends State<YuriChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey)),
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -111,29 +212,33 @@ class _YuriChatState extends State<YuriChat> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Row(
-                    children: const [
-                      Icon(Icons.notifications),
-                      SizedBox(width: 8),
-                      CircleAvatar(
+                    children: [
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.notifications),
+                      ),
+                      const CircleAvatar(
                         radius: 16,
-                        backgroundImage: AssetImage('assets/yuri_profile.png'),
+                        backgroundImage: NetworkImage(
+                          'https://randomuser.me/api/portraits/women/45.jpg',
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            // 채팅 프로필 (복원된 부분)
+            // 채팅 헤더
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               child: Row(
-                children: const [
-                  CircleAvatar(
+                children: [
+                  const CircleAvatar(
                     radius: 14,
-                    backgroundImage: AssetImage('assets/yuri_profile.png'),
+                    backgroundImage: AssetImage('assets/yuri_chat.jpg'),
                   ),
-                  SizedBox(width: 8),
-                  Text(
+                  const SizedBox(width: 8),
+                  const Text(
                     '유리',
                     style: TextStyle(
                       fontSize: 14,
@@ -144,16 +249,34 @@ class _YuriChatState extends State<YuriChat> {
                 ],
               ),
             ),
-            // 메시지 리스트
+            // 채팅 메시지 영역
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 itemCount: messages.length,
-                itemBuilder: (_, idx) => _buildBubble(messages[idx]),
+                itemBuilder: (context, idx) {
+                  final msg = messages[idx];
+                  final isYuri = msg['sender'] == 'yuri';
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    alignment: isYuri ? Alignment.centerLeft : Alignment.centerRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isYuri ? Colors.white : Colors.purple[100],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        msg['text'] ?? '',
+                        style: TextStyle(
+                          color: isYuri ? Colors.black87 : Colors.purple[900],
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             // 기능 버튼
@@ -164,20 +287,20 @@ class _YuriChatState extends State<YuriChat> {
                 runSpacing: 8,
                 children: [
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _sendMessage,
-                    child: const Text('📝 소설 작성 도우미'),
+                    onPressed: _isLoading ? null : () => _changeMode('art-critic'),
+                    child: const Text('🎨 예술 비평'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _sendMessage,
-                    child: const Text('📘 문학 분석'),
+                    onPressed: _isLoading ? null : () => _changeMode('art-history'),
+                    child: const Text('📚 예술사'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _sendMessage,
-                    child: const Text('📄 시 쓰기 놀이'),
+                    onPressed: _isLoading ? null : () => _changeMode('art-technique'),
+                    child: const Text('🖌️ 기법 설명'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _sendMessage,
-                    child: const Text('📚 독서 추천 & 기록'),
+                    onPressed: _isLoading ? null : () => _changeMode('art-inspiration'),
+                    child: const Text('✨ 영감 찾기'),
                   ),
                 ],
               ),
@@ -186,44 +309,23 @@ class _YuriChatState extends State<YuriChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey)),
+                border: Border(
+                  top: BorderSide(color: Colors.grey),
+                ),
               ),
               child: Row(
                 children: [
-                  Flexible(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 120),
-                      child: Scrollbar(
-                        child: RawKeyboardListener(
-                          focusNode: _textFieldFocus,
-                          onKey: (e) {
-                            if (e is RawKeyDownEvent &&
-                                e.logicalKey == LogicalKeyboardKey.enter &&
-                                !e.isShiftPressed &&
-                                !_isLoading) {
-                              _sendMessage();
-                            }
-                          },
-                          child: TextField(
-                            controller: _controller,
-                            enabled: !_isLoading,
-                            keyboardType: TextInputType.multiline,
-                            maxLines: null,
-                            minLines: 1,
-                            decoration: const InputDecoration(
-                              hintText: '메시지를 입력하세요...',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(20),
-                                ),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                          ),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      onSubmitted: (_) => _sendMessage(),
+                      enabled: !_isLoading,
+                      decoration: const InputDecoration(
+                        hintText: '메시지를 입력하세요...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(20)),
                         ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
                     ),
                   ),
@@ -232,32 +334,50 @@ class _YuriChatState extends State<YuriChat> {
                     onPressed: _isLoading ? null : _sendMessage,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
-                    child:
-                        _isLoading
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                            : const Text('전송'),
+                    child: const Text('전송'),
                   ),
+                ],
+              ),
+            ),
+            // 하단 네비게이션
+            Container(
+              height: 56,
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Colors.grey),
+                ),
+                color: Colors.white,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _navItem(Icons.home, '홈'),
+                  _navItem(Icons.smart_toy, 'AI'),
+                  _navItem(Icons.search, '탐색'),
+                  _navItem(Icons.settings, '설정'),
+                  _navItem(Icons.person, '나'),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _navItem(IconData icon, String label) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 24, color: Colors.purple),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.purple)),
+      ],
     );
   }
 }

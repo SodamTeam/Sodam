@@ -1,8 +1,10 @@
 // Sodam/lib/sera_chart.dart
 
 import 'package:flutter/material.dart';
-import 'chat_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'profile_service.dart';
+import 'package:flutter/foundation.dart';
 
 class SeraChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -14,36 +16,102 @@ class SeraChat extends StatefulWidget {
 }
 
 class _SeraChatState extends State<SeraChat> {
-  final TextEditingController _textController = TextEditingController();
+  final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ChatService chatService = ChatService();
 
-  final List<Map<String, dynamic>> _messages = [
+  List<Map<String, String>> messages = [
     {
-      'sender': '세라',
-      'type': 'intro',
-      'text': '안녕하세요!\n전 세라라고 해요.',
-      'image': 'assets/girl2.png',
-    },
+      'sender': 'sera',
+      'text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?',
+    }
   ];
 
+  String mode = 'default';
   bool _isLoading = false;
-  final String systemPrompt = ProfileService.getProfile('sera');
+  String systemPrompt = '';  // 초기값을 빈 문자열로 설정
 
-  void _handleSend() async {
-    final input = _textController.text.trim();
-    if (input.isEmpty || _isLoading) return;
+  final Map<String, String> modeLabels = {
+    'coding-helper': '코딩 도우미',
+    'tech-explainer': '기술 설명',
+    'debug-assistant': '디버깅 도우미',
+    'learning-path': '학습 로드맵',
+    'default': '기본',
+  };
 
+  String get _baseUrl => 'http://localhost:8003/api/chat/generate';  // gateway URL로 수정
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();  // 프로필 로드 함수 호출
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await ProfileService.getProfile('sera');
     setState(() {
-      _messages.add({'sender': '나', 'text': input});
-      _textController.clear();
+      systemPrompt = profile;
+    });
+  }
+
+  Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
+    try {
+      final url = Uri.parse(_baseUrl);
+      final body = {
+        "model": "gemma3:4b",
+        "prompt": prompt,
+        "stream": false,
+      };
+
+      if (systemPrompt != null && systemPrompt.isNotEmpty) {
+        body["system"] = systemPrompt;
+      }
+
+      if (mode != null && mode.isNotEmpty) {
+        body["mode"] = mode;
+      }
+
+      print('Sending request to: $url');
+      print('Request body: $body');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print("LLM 응답 원본: $data");
+        return data['response'] ?? '응답을 이해하지 못했어요.';
+      } else {
+        return 'AI 서버 오류: ${response.statusCode}';
+      }
+    } catch (e) {
+      print('Error occurred: $e');
+      return 'AI 연결 실패: $e';
+    }
+  }
+
+  void _sendMessage() async {
+    final input = _controller.text.trim();
+    if (input.isEmpty || _isLoading) return;
+    setState(() {
+      messages.add({'sender': 'user', 'text': input});
+      _controller.clear();
       _isLoading = true;
     });
 
-    final reply = await chatService.generate(input, systemPrompt: systemPrompt);
+    final reply = await _generateResponse(
+      input,
+      systemPrompt: systemPrompt,
+      mode: mode,
+    );
 
     setState(() {
-      _messages.add({'sender': '세라', 'text': reply});
+      messages.add({'sender': 'sera', 'text': reply});
       _isLoading = false;
     });
     _scrollToBottom();
@@ -61,18 +129,64 @@ class _SeraChatState extends State<SeraChat> {
     });
   }
 
+  void _changeMode(String newMode) async {
+    setState(() {
+      mode = newMode;
+      messages = [
+        {
+          'sender': 'sera',
+          'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
+        }
+      ];
+    });
+
+    String initialPrompt = '';
+    if (newMode == 'coding-helper') {
+      initialPrompt = '코딩을 도와줘!';
+    } else if (newMode == 'tech-explainer') {
+      initialPrompt = '기술을 설명해줘!';
+    } else if (newMode == 'debug-assistant') {
+      initialPrompt = '디버깅을 도와줘!';
+    } else if (newMode == 'learning-path') {
+      initialPrompt = '학습 로드맵을 만들어줘!';
+    } else {
+      initialPrompt = '';
+    }
+
+    if (initialPrompt.isNotEmpty) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final reply = await _generateResponse(
+        initialPrompt,
+        systemPrompt: systemPrompt,
+        mode: newMode,
+      );
+
+      setState(() {
+        messages.add({'sender': 'sera', 'text': reply});
+        _isLoading = false;
+      });
+
+      _scrollToBottom();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfff8f4fa),
+      backgroundColor: const Color(0xfff4f8fa),
       body: SafeArea(
         child: Column(
           children: [
-            // 상단 네비게이션
+            // 상단 헤더
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey)),
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -83,7 +197,7 @@ class _SeraChatState extends State<SeraChat> {
                   ),
                   const Text(
                     '세라',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Row(
                     children: [
@@ -92,140 +206,150 @@ class _SeraChatState extends State<SeraChat> {
                         icon: const Icon(Icons.notifications),
                       ),
                       const CircleAvatar(
-                        radius: 12,
-                        backgroundImage: AssetImage('assets/profile.png'),
+                        radius: 16,
+                        backgroundImage: NetworkImage(
+                          'https://randomuser.me/api/portraits/women/44.jpg',
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-
-            // 채팅 영역
+            // 채팅 헤더
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 14,
+                    backgroundImage: AssetImage('assets/sera_chat.jpg'),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '세라',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 채팅 메시지 영역
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                itemCount: _messages.length,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: messages.length,
                 itemBuilder: (context, idx) {
-                  final msg = _messages[idx];
-                  final isSera = msg['sender'] == '세라';
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: Row(
-                      mainAxisAlignment:
-                          isSera
-                              ? MainAxisAlignment.start
-                              : MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (isSera) ...[
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const CircleAvatar(
-                                    radius: 14,
-                                    backgroundImage: AssetImage(
-                                      'assets/girl2_icon.png',
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    '세라',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              _buildBubble(msg, isSera: true),
-                            ],
-                          ),
-                        ] else ...[
-                          _buildBubble(msg, isSera: false),
-                        ],
-                      ],
+                  final msg = messages[idx];
+                  final isSera = msg['sender'] == 'sera';
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    alignment: isSera ? Alignment.centerLeft : Alignment.centerRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSera ? Colors.white : Colors.blue[100],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        msg['text'] ?? '',
+                        style: TextStyle(
+                          color: isSera ? Colors.black87 : Colors.blue[900],
+                          fontSize: 15,
+                        ),
+                      ),
                     ),
                   );
                 },
               ),
             ),
-
-            // 선택지 버튼
-            Container(
-              padding: const EdgeInsets.all(16),
+            // 기능 버튼
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children:
-                    ["앱/웹 아이디어", "IT 용어 쉽게 풀기", "유용한 앱 소개", "코딩 놀이"]
-                        .map(
-                          (text) => ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                _messages.add({'sender': '나', 'text': text});
-                              });
-                              _handleSend();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[200],
-                              foregroundColor: Colors.black,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                            child: Text(text),
-                          ),
-                        )
-                        .toList(),
+                children: [
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _changeMode('coding-helper'),
+                    child: const Text('💻 코딩 도우미'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _changeMode('tech-explainer'),
+                    child: const Text('🔧 기술 설명'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _changeMode('debug-assistant'),
+                    child: const Text('🐛 디버깅 도우미'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _changeMode('learning-path'),
+                    child: const Text('📚 학습 로드맵'),
+                  ),
+                ],
               ),
             ),
-
             // 입력창
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey)),
+                border: Border(
+                  top: BorderSide(color: Colors.grey),
+                ),
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: _textController,
-                      onSubmitted: (_) => _handleSend(),
-                      decoration: InputDecoration(
-                        hintText: '대화 시작하기',
+                      controller: _controller,
+                      onSubmitted: (_) => _sendMessage(),
+                      enabled: !_isLoading,
+                      decoration: const InputDecoration(
+                        hintText: '메시지를 입력하세요...',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.all(Radius.circular(20)),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _handleSend,
+                    onPressed: _isLoading ? null : _sendMessage,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
+                      backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
-                    child: const Text('보내기'),
+                    child: const Text('전송'),
                   ),
+                ],
+              ),
+            ),
+            // 하단 네비게이션
+            Container(
+              height: 56,
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Colors.grey),
+                ),
+                color: Colors.white,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _navItem(Icons.home, '홈'),
+                  _navItem(Icons.smart_toy, 'AI'),
+                  _navItem(Icons.search, '탐색'),
+                  _navItem(Icons.settings, '설정'),
+                  _navItem(Icons.person, '나'),
                 ],
               ),
             ),
@@ -235,26 +359,13 @@ class _SeraChatState extends State<SeraChat> {
     );
   }
 
-  Widget _buildBubble(Map<String, dynamic> msg, {required bool isSera}) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 250),
-      decoration: BoxDecoration(
-        color: isSera ? Colors.white : Colors.purple[100],
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(12),
-      child:
-          msg['type'] == 'intro' && msg['image'] != null
-              ? Column(
-                children: [
-                  Text(msg['text'].split('\n')[0]),
-                  const SizedBox(height: 8),
-                  Image.asset(msg['image'], width: 180, height: 180),
-                  const SizedBox(height: 8),
-                  Text(msg['text'].split('\n')[1]),
-                ],
-              )
-              : Text(msg['text']),
+  Widget _navItem(IconData icon, String label) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 24, color: Colors.blue),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.blue)),
+      ],
     );
   }
 }

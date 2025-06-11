@@ -7,14 +7,19 @@ class ChatService {
   final String model;
 
   ChatService({
-    this.baseUrl = 'http://localhost:11434/api/generate',
+    this.baseUrl = 'http://localhost:8000',  // chat-service의 기본 포트
     this.model = 'gemma3:4b',
   });
 
   Future<String> generate(String prompt, {String? systemPrompt}) async {
     try {
-      final url = Uri.parse(baseUrl);
-      final body = {"model": model, "prompt": prompt, "stream": false};
+      final url = Uri.parse('$baseUrl/generate');
+      final body = {
+        "model": model,
+        "prompt": prompt,
+        "stream": false,
+        "mode": "chat"  // 기본 모드 추가
+      };
       if (systemPrompt != null && systemPrompt.isNotEmpty) {
         body["system"] = systemPrompt;
       }

@@ -25,8 +25,7 @@ class _HarinChatState extends State<HarinChat> {
 
   String mode = 'default';
   bool _isLoading = false;
-
-  final String systemPrompt = ProfileService.getProfile('harin');
+  String systemPrompt = '';  // 초기값을 빈 문자열로 설정
 
   final Map<String, String> modeLabels = {
     'novel-helper': '소설 작성 도우미',
@@ -36,47 +35,44 @@ class _HarinChatState extends State<HarinChat> {
     'default': '기본',
   };
 
-  String get _baseUrl => 'http://localhost:8003/api/generate';
+  String get _baseUrl => 'http://localhost:8000/generate';  // chat-service의 새로운 URL로 수정
 
-  Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();  // 프로필 로드 함수 호출
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await ProfileService.getProfile('harin');
+    setState(() {
+      systemPrompt = profile;
+    });
+  }
+
+  Future<String> _generateResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
     try {
-      final url = Uri.parse(_baseUrl);
-      final body = {
-        "model": "gemma3:4b",
-        "prompt": prompt,
-        "stream": false,
-      };
-
-      if (systemPrompt != null && systemPrompt.isNotEmpty) {
-        body["system"] = systemPrompt;
-      }
-
-      if (mode != null && mode.isNotEmpty) {
-        body["mode"] = mode;
-      }
-
-      print('Sending request to: $url');
-      print('Request body: $body');
-
       final response = await http.post(
-        url,
+        Uri.parse('http://localhost:8000/generate'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': input,
+          'mode': mode,
+          'stream': false,
+          'system': systemPrompt,
+          'character': 'harin',
+        }),
       );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("LLM 응답 원본: $data");
-        return data['response'] ?? '응답을 이해하지 못했어요.';
+        return data['response'];
       } else {
-        return 'AI 서버 오류: ${response.statusCode}';
+        throw Exception('Failed to generate response');
       }
     } catch (e) {
-      print('Error occurred: $e');
-      return 'AI 연결 실패: $e';
+      return '죄송합니다. 오류가 발생했습니다.';
     }
   }
 
@@ -315,26 +311,6 @@ class _HarinChatState extends State<HarinChat> {
                     ),
                     child: const Text('전송'),
                   ),
-                ],
-              ),
-            ),
-            // 하단 네비게이션
-            Container(
-              height: 56,
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey),
-                ),
-                color: Colors.white,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _navItem(Icons.home, '홈'),
-                  _navItem(Icons.smart_toy, 'AI'),
-                  _navItem(Icons.search, '탐색'),
-                  _navItem(Icons.settings, '설정'),
-                  _navItem(Icons.person, '나'),
                 ],
               ),
             ),
