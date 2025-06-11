@@ -26,7 +26,7 @@ class _YuriChatState extends State<YuriChat> {
   List<Map<String, String>> messages = [
     {
       'sender': 'yuri',
-      'text': '안녕하세요! 저는 예술가 유리예요 🎨\n어떤 예술에 대해 이야기해볼까요?',
+      'text': '안녕하세요! 저는 과학 소녀 유리예요 🔬\n어떤 과학 현상에 대해 이야기해볼까요?',
     }
   ];
 
@@ -35,14 +35,14 @@ class _YuriChatState extends State<YuriChat> {
   String systemPrompt = '';  // 초기값을 빈 문자열로 설정
 
   final Map<String, String> modeLabels = {
-    'art-critic': '예술 비평',
-    'art-history': '예술사',
-    'art-technique': '기법 설명',
-    'art-inspiration': '영감 찾기',
+    'science-explainer': '과학 설명',
+    'experiment-helper': '실험 도우미',
+    'nature-explorer': '자연 탐험',
+    'science-news': '과학 뉴스',
     'default': '기본',
   };
 
-  String get _baseUrl => 'http://localhost:8003/api/chat/generate';  // gateway URL로 수정
+  String get _baseUrl => 'http://localhost:8000/generate';  // chat-service의 새로운 URL로 수정
 
   @override
   void initState() {
@@ -57,45 +57,30 @@ class _YuriChatState extends State<YuriChat> {
     });
   }
 
-  Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
+  Future<String> _generateResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
     try {
-      final url = Uri.parse(_baseUrl);
-      final body = {
-        "model": "gemma3:4b",
-        "prompt": prompt,
-        "stream": false,
-      };
-
-      if (systemPrompt != null && systemPrompt.isNotEmpty) {
-        body["system"] = systemPrompt;
-      }
-
-      if (mode != null && mode.isNotEmpty) {
-        body["mode"] = mode;
-      }
-
-      print('Sending request to: $url');
-      print('Request body: $body');
-
       final response = await http.post(
-        url,
+        Uri.parse('http://localhost:8000/generate'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': input,
+          'mode': mode,
+          'stream': false,
+          'system': systemPrompt,
+          'character': 'yuri',
+          'name': '유리'
+        }),
       );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("LLM 응답 원본: $data");
-        return data['response'] ?? '응답을 이해하지 못했어요.';
+        return data['response'];
       } else {
-        return 'AI 서버 오류: ${response.statusCode}';
+        throw Exception('Failed to generate response');
       }
     } catch (e) {
-      print('Error occurred: $e');
-      return 'AI 연결 실패: $e';
+      return '죄송합니다. 오류가 발생했습니다.';
     }
   }
 
@@ -145,14 +130,14 @@ class _YuriChatState extends State<YuriChat> {
     });
 
     String initialPrompt = '';
-    if (newMode == 'art-critic') {
-      initialPrompt = '예술 작품을 비평해줘!';
-    } else if (newMode == 'art-history') {
-      initialPrompt = '예술사에 대해 설명해줘!';
-    } else if (newMode == 'art-technique') {
-      initialPrompt = '예술 기법을 설명해줘!';
-    } else if (newMode == 'art-inspiration') {
-      initialPrompt = '예술적 영감을 찾아줘!';
+    if (newMode == 'science-explainer') {
+      initialPrompt = '과학 현상을 설명해줘!';
+    } else if (newMode == 'experiment-helper') {
+      initialPrompt = '실험을 도와줘!';
+    } else if (newMode == 'nature-explorer') {
+      initialPrompt = '자연 현상을 탐험해보자!';
+    } else if (newMode == 'science-news') {
+      initialPrompt = '최신 과학 뉴스를 알려줘!';
     } else {
       initialPrompt = '';
     }
@@ -287,20 +272,20 @@ class _YuriChatState extends State<YuriChat> {
                 runSpacing: 8,
                 children: [
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('art-critic'),
-                    child: const Text('🎨 예술 비평'),
+                    onPressed: _isLoading ? null : () => _changeMode('science-explainer'),
+                    child: const Text('🔬 과학 설명'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('art-history'),
-                    child: const Text('📚 예술사'),
+                    onPressed: _isLoading ? null : () => _changeMode('experiment-helper'),
+                    child: const Text('🧪 실험 도우미'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('art-technique'),
-                    child: const Text('🖌️ 기법 설명'),
+                    onPressed: _isLoading ? null : () => _changeMode('nature-explorer'),
+                    child: const Text('🌱 자연 탐험'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('art-inspiration'),
-                    child: const Text('✨ 영감 찾기'),
+                    onPressed: _isLoading ? null : () => _changeMode('science-news'),
+                    child: const Text('📰 과학 뉴스'),
                   ),
                 ],
               ),

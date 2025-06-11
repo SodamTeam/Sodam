@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'profile_service.dart';
 import 'package:flutter/foundation.dart';
+import 'config.dart';
 
 class HarinChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -36,7 +37,7 @@ class _HarinChatState extends State<HarinChat> {
     'default': '기본',
   };
 
-  String get _baseUrl => 'http://localhost:8000/generate'; // chat-service의 새로운 URL로 수정
+  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';  // API Gateway 엔드포인트 사용
 
   @override
   void initState() {
@@ -54,7 +55,7 @@ class _HarinChatState extends State<HarinChat> {
   Future<String> _generateResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
     try {
       final response = await http.post(
-        Uri.parse(_baseUrl),
+        Uri.parse(_baseUrl),  // _baseUrl 사용
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'model': 'gemma3:4b',
@@ -63,6 +64,7 @@ class _HarinChatState extends State<HarinChat> {
           'stream': false,
           'system': systemPrompt,
           'character': 'harin',
+          'name': '하린'
         }),
       );
 

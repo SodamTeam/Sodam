@@ -1,15 +1,28 @@
 // Sodam/lib/chat_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'config.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 
 class ChatService {
   final String baseUrl;
   final String model;
 
   ChatService({
-    this.baseUrl = 'http://localhost:8000',  // chat-service의 기본 포트
+    String? baseUrl,
     this.model = 'gemma3:4b',
-  });
+  }) : baseUrl = baseUrl ?? Config.baseUrl;
+
+  static String _getBaseUrl() {
+    if (kIsWeb) {
+      return 'http://localhost:8000';
+    }
+    if (Platform.isAndroid || Platform.isIOS) {
+      return 'https://9b0b-121-135-57-14.ngrok-free.app';  // ngrok URL
+    }
+    return 'http://localhost:8000';
+  }
 
   Future<String> generate(String prompt, {String? systemPrompt}) async {
     try {

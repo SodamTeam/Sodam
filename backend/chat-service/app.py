@@ -32,7 +32,7 @@ def get_db():
 OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/generate")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemma3:4b")
 GOOGLE_BOOKS_API = "https://www.googleapis.com/books/v1/volumes"
-PROFILE_SERVICE_URL = "http://localhost:8002"
+API_GATEWAY_URL = "http://localhost:8000"  # API Gateway URL로 변경
 
 class GenerateRequest(BaseModel):
     model: str
@@ -41,6 +41,7 @@ class GenerateRequest(BaseModel):
     stream: bool = False
     system: str | None = None
     character: str | None = None
+    name: str | None = None
 
 class GenerateResponse(BaseModel):
     response: str
@@ -55,18 +56,25 @@ class ChatResponse(BaseModel):
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(req: GenerateRequest):
     try:
+        print(f"Generate request received: {req}")  # 요청 로깅
+        
         # 프로필 서비스에서 캐릭터 정보 가져오기
         if req.character:
+            print(f"Fetching profile for character: {req.character}")  # 프로필 요청 로깅
             async with httpx.AsyncClient() as client:
-                profile_response = await client.get(f"{PROFILE_SERVICE_URL}/{req.character}")
+                profile_response = await client.get(f"{API_GATEWAY_URL}/api/profile/{req.character}")
+                print(f"Profile response status: {profile_response.status_code}")  # 프로필 응답 로깅
                 if profile_response.status_code == 200:
                     profile = profile_response.json()
+                    system_name = req.name if req.name else profile['name']
                     req.system = f"""
-                    너는 {profile['name']}이야. {profile['description']}
+                    네 이름은 {system_name}이야. 너는 {profile['description']}이야.
                     {profile['personality']}
                     관심사: {profile['interests']}
                     배경: {profile['background']}
+                    항상 {system_name}으로서 대답해.
                     """
+                    print(f"System prompt created: {req.system}")  # 시스템 프롬프트 로깅
 
         # 'book' 모드일 경우 Google Books API 사용
         if req.mode == "book":
@@ -108,8 +116,11 @@ async def generate(req: GenerateRequest):
         if req.system:
             payload["system"] = req.system
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        print(f"Sending request to Ollama: {payload}")  # Ollama 요청 로깅
+        async with httpx.AsyncClient(timeout=180.0) as client:
             resp = await client.post(OLLAMA_API_URL, json=payload)
+            print(f"Ollama response status: {resp.status_code}")  # Ollama 응답 상태 로깅
+            print(f"Ollama response: {resp.text}")  # Ollama 응답 내용 로깅
             resp.raise_for_status()
             data = resp.json()
 
@@ -120,6 +131,7 @@ async def generate(req: GenerateRequest):
         return GenerateResponse(response=result)
 
     except Exception as e:
+        print(f"Error in generate: {str(e)}")  # 오류 로깅
         raise HTTPException(status_code=500, detail=f"서버 오류: {e}")
 
 @app.post("/chat", response_model=schemas.ChatResponse)
@@ -162,7 +174,7 @@ async def generate_response(request: ChatRequest):
     try:
         # 프로필 서비스에서 캐릭터 정보 가져오기
         async with httpx.AsyncClient() as client:
-            profile_response = await client.get(f"{PROFILE_SERVICE_URL}/{request.character}")
+            profile_response = await client.get(f"{API_GATEWAY_URL}/api/profile/{request.character}")  # API Gateway 사용
             if profile_response.status_code != 200:
                 raise HTTPException(status_code=404, detail="Character not found")
             
@@ -179,4 +191,4 @@ async def generate_response(request: ChatRequest):
             return ChatResponse(response=f"{profile['name']}: {request.message}")
             
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
