@@ -117,7 +117,7 @@ async def generate(req: GenerateRequest):
             payload["system"] = req.system
 
         print(f"Sending request to Ollama: {payload}")  # Ollama 요청 로깅
-        async with httpx.AsyncClient(timeout=180.0) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:  # 타임아웃을 30초로 설정
             resp = await client.post(OLLAMA_API_URL, json=payload)
             print(f"Ollama response status: {resp.status_code}")  # Ollama 응답 상태 로깅
             print(f"Ollama response: {resp.text}")  # Ollama 응답 내용 로깅

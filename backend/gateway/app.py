@@ -24,7 +24,7 @@ AUTH_SERVICE_URL = "http://localhost:8002"  # auth-service
 PROFILE_SERVICE_URL = "http://localhost:8003"  # profile-service
 
 # HTTP 클라이언트 설정
-http_client = httpx.AsyncClient(timeout=180.0)
+http_client = httpx.AsyncClient(timeout=30.0)
 
 # 채팅 서비스 라우팅
 @app.post("/api/chat/generate")
