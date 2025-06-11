@@ -60,16 +60,28 @@ class _HarinChatState extends State<HarinChat> {
     });
 
     try {
-      final String apiUrl = '${Config.baseUrl}/api/chat/generate'; // 모든 모드에서 단일 엔드포인트 사용
+      final String apiUrl = '${Config.baseUrl}/api/chat/generate';
+
+      // 이전 대화 내용을 포함한 프롬프트 생성
+      String conversationHistory = '';
+      for (var i = 0; i < messages.length - 1; i++) {
+        final message = messages[i];
+        if (message['sender'] == 'user') {
+          conversationHistory += '사용자: ${message['text']}\n';
+        } else {
+          conversationHistory += '하린: ${message['text']}\n';
+        }
+      }
+      conversationHistory += '사용자: $input';
 
       // 모드에 따라 prefix 추가
-      String promptWithPrefix = input;
+      String promptWithPrefix = conversationHistory;
       if (mode == 'novel-helper') {
-        promptWithPrefix = '소설 쓰기 도와줘! $input';
+        promptWithPrefix = '소설 쓰기 도와줘!\n$conversationHistory';
       } else if (mode == 'literary-analysis') {
-        promptWithPrefix = '문학 분석 도와줘! $input';
+        promptWithPrefix = '문학 분석 도와줘!\n$conversationHistory';
       } else if (mode == 'poetry-play') {
-        promptWithPrefix = '시 쓰기 놀이를 하자! $input';
+        promptWithPrefix = '시 쓰기 놀이를 하자!\n$conversationHistory';
       }
 
       final request = http.Request('POST', Uri.parse(apiUrl));
@@ -78,7 +90,7 @@ class _HarinChatState extends State<HarinChat> {
         'model': 'gemma3:4b',
         'prompt': promptWithPrefix,
         'mode': mode == 'book-recommendation' ? 'book' : mode,
-        'stream': mode != 'book-recommendation',  // book 모드가 아닐 때만 stream: true
+        'stream': mode != 'book-recommendation',
         'system': systemPrompt,
         'character': 'harin',
         'name': '하린'
