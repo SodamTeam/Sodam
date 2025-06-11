@@ -1,4 +1,3 @@
-// Sodam/lib//harin_chat.dart
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -36,7 +35,6 @@ class _HarinChatState extends State<HarinChat> {
     'default': '기본',
   };
 
-  // gateway를 통한 경로로 변경
   String get _baseUrl => 'http://localhost:8003/api/generate';
 
   Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
@@ -126,15 +124,28 @@ class _HarinChatState extends State<HarinChat> {
       ];
     });
 
-    if (newMode == 'book-recommendation') {
+    String initialPrompt = '';
+    if (newMode == 'novel-helper') {
+      initialPrompt = '소설 작성을 도와줘!';
+    } else if (newMode == 'literary-analysis') {
+      initialPrompt = '문학 분석을 도와줘!';
+    } else if (newMode == 'poetry-play') {
+      initialPrompt = '시 쓰기 놀이를 하자!';
+    } else if (newMode == 'book-recommendation') {
+      initialPrompt = '감동적인 책';
+    } else {
+      initialPrompt = '';
+    }
+
+    if (initialPrompt.isNotEmpty) {
       setState(() {
         _isLoading = true;
       });
 
       final reply = await _generateResponse(
-        "감동적인 책",
+        initialPrompt,
         systemPrompt: systemPrompt,
-        mode: "book",
+        mode: newMode == 'book-recommendation' ? 'book' : newMode,
       );
 
       setState(() {
