@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'profile_service.dart';
+import 'package:flutter/foundation.dart';
 
 class HarinChat extends StatefulWidget {
   final VoidCallback goBack;

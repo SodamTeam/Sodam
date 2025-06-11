@@ -48,4 +48,4 @@ if __name__ == "__main__":
     chat_thread.start()
     
     # 메인 FastAPI 서버 실행 (8003 포트)
-    uvicorn.run(app, host="127.0.0.1", port=8003)
+    uvicorn.run(app, host="0.0.0.0", port=8003)
