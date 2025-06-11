@@ -112,50 +112,60 @@ class _HarinChatState extends State<HarinChat> {
       }
     });
   }
-
   void _changeMode(String newMode) async {
-    setState(() {
-      mode = newMode;
-      messages = [
-        {
-          'sender': 'harin',
-          'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
-        }
-      ];
-      _isLoading = true;
-    });
+  setState(() {
+    mode = newMode;
+    messages = [
+      {
+        'sender': 'harin',
+        'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
+      }
+    ];
+    _isLoading = true;
+  });
 
-    String initialPrompt = '';
-    if (newMode == 'novel-helper') {
-      initialPrompt = '소설 작성을 도와줘!';
-    } else if (newMode == 'literary-analysis') {
-      initialPrompt = '문학 분석을 도와줘!';
-    } else if (newMode == 'poetry-play') {
-      initialPrompt = '시 쓰기 놀이를 하자!';
-    } else if (newMode == 'book-recommendation') {
-      initialPrompt = '감동적인 책';
-    } else {
-      initialPrompt = '';
-      setState(() {
-        _isLoading = false;
+  String initialPrompt = '';
+  if (newMode == 'novel-helper') {
+    initialPrompt = '소설 작성을 도와줘!';
+  } else if (newMode == 'literary-analysis') {
+    initialPrompt = '문학 분석을 도와줘!';
+  } else if (newMode == 'poetry-play') {
+    initialPrompt = '시 쓰기 놀이를 하자!';
+  } else if (newMode == 'book-recommendation') {
+    // 🔽 여기를 아래처럼 수정하세요
+    setState(() {
+      messages.add({
+        'sender': 'harin',
+        'text': '독서추천입니다! 원하는 종류의 책을 적어주시면 책 추천을 해줍니다! 키워드로 검색해보세요!',
       });
-      return;
-    }
-
-    final reply = await _generateResponse(
-      initialPrompt,
-      systemPrompt: systemPrompt,
-      mode: newMode == 'book-recommendation' ? 'book' : newMode,
-    );
-
-    setState(() {
-      messages.add({'sender': 'harin', 'text': reply});
       _isLoading = false;
     });
-
     _scrollToBottom();
+    return;
+  } else {
+    initialPrompt = '';
+    setState(() {
+      _isLoading = false;
+    });
+    return;
   }
 
+  final reply = await _generateResponse(
+    initialPrompt,
+    systemPrompt: systemPrompt,
+    mode: newMode == 'book-recommendation' ? 'book' : newMode,
+  );
+
+  setState(() {
+    messages.add({'sender': 'harin', 'text': reply});
+    _isLoading = false;
+  });
+
+  _scrollToBottom();
+}
+
+
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
