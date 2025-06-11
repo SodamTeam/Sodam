@@ -1,3 +1,5 @@
+# backend/app/schemas.py
+
 from pydantic import BaseModel, constr
 
 class UserCreate(BaseModel):

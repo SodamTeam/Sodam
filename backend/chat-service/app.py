@@ -1,3 +1,5 @@
+# backend/chat-service/app.py
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List

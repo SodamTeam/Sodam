@@ -1,3 +1,5 @@
+# backend/gateway/app.py
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
