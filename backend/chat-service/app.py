@@ -8,6 +8,8 @@ import schemas
 import database
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+import json
 
 app = FastAPI(title="Sodam Chat Service")
 
@@ -191,4 +193,32 @@ async def generate_response(request: ChatRequest):
             return ChatResponse(response=f"{profile['name']}: {request.message}")
             
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/generate-stream")
+async def generate_stream(req: GenerateRequest):
+    try:
+        print(f"Stream request received: {req}")  # 요청 로깅
+        async def generate():
+            payload = {
+                "model": req.model,
+                "prompt": req.prompt or "기본 프롬프트",
+                "stream": True,
+            }
+            if req.system:
+                payload["system"] = req.system
+
+            print(f"Sending request to Ollama: {payload}")  # Ollama 요청 로깅
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                async with client.stream('POST', OLLAMA_API_URL, json=payload) as response:
+                    print(f"Ollama response status: {response.status_code}")  # Ollama 응답 상태 로깅
+                    async for line in response.aiter_lines():
+                        if line:
+                            print(f"Ollama chunk: {line}")  # Ollama 응답 청크 로깅
+                            data = json.loads(line)
+                            yield f"data: {json.dumps({'response': data.get('response', '')})}\n\n"
+
+        return StreamingResponse(generate(), media_type="text/event-stream")
+    except Exception as e:
+        print(f"Stream error: {str(e)}")  # 오류 로깅
         raise HTTPException(status_code=500, detail=str(e))

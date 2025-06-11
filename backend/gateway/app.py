@@ -1,11 +1,13 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import httpx
 import os
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import json
 
 app = FastAPI(title="Sodam API Gateway")
 
@@ -39,6 +41,44 @@ async def generate_chat(request: dict):
         return response.json()
     except Exception as e:
         print(f"Chat error: {str(e)}")  # 디버깅용 로그
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/generate-stream")
+async def generate_stream(request: Request):
+    try:
+        request_data = await request.json()
+        print(f"Stream request received: {request_data}")  # 요청 데이터 로깅
+        
+        async def stream_response():
+            try:
+                print(f"Connecting to chat service: {CHAT_SERVICE_URL}/api/chat/generate-stream")  # 연결 로깅
+                async with httpx.AsyncClient() as client:
+                    async with client.stream(
+                        'POST',
+                        f"{CHAT_SERVICE_URL}/api/chat/generate-stream",
+                        json=request_data,
+                        timeout=30.0
+                    ) as response:
+                        print(f"Chat service response status: {response.status_code}")  # 응답 상태 로깅
+                        if response.status_code != 200:
+                            error_text = await response.text()
+                            print(f"Chat service error: {error_text}")  # 오류 로깅
+                            yield f"data: {json.dumps({'error': error_text})}\n\n"
+                            return
+                        
+                        async for chunk in response.aiter_bytes():
+                            print(f"Received chunk: {chunk}")  # 청크 로깅
+                            yield chunk
+            except Exception as e:
+                print(f"Stream error in gateway: {str(e)}")  # 오류 로깅
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        return StreamingResponse(
+            stream_response(),
+            media_type="text/event-stream"
+        )
+    except Exception as e:
+        print(f"Gateway error: {str(e)}")  # 오류 로깅
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chat")

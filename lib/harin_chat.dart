@@ -37,8 +37,6 @@ class _HarinChatState extends State<HarinChat> {
     'default': '기본',
   };
 
-  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';  // API Gateway 엔드포인트 사용
-
   @override
   void initState() {
     super.initState();
@@ -52,33 +50,6 @@ class _HarinChatState extends State<HarinChat> {
     });
   }
 
-  Future<String> _generateResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
-    try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),  // _baseUrl 사용
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'model': 'gemma3:4b',
-          'prompt': input,
-          'mode': mode,
-          'stream': false,
-          'system': systemPrompt,
-          'character': 'harin',
-          'name': '하린'
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['response'];
-      } else {
-        throw Exception('Failed to generate response');
-      }
-    } catch (e) {
-      return '죄송합니다. 오류가 발생했습니다.';
-    }
-  }
-
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
@@ -88,17 +59,50 @@ class _HarinChatState extends State<HarinChat> {
       _isLoading = true;
     });
 
-    final reply = await _generateResponse(
-      input,
-      systemPrompt: systemPrompt,
-      mode: mode == 'book-recommendation' ? 'book' : mode,
-    );
+    try {
+      final request = http.Request('POST', Uri.parse('${Config.baseUrl}/api/chat/generate-stream'));  // API Gateway URL 사용
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': input,
+        'mode': mode == 'book-recommendation' ? 'book' : mode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'harin',
+        'name': '하린'
+      });
 
-    setState(() {
-      messages.add({'sender': 'harin', 'text': reply});
-      _isLoading = false;
-    });
-    _scrollToBottom();
+      final response = await request.send();
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      String fullResponse = '';
+      await for (final line in stream) {
+        if (line.startsWith('data: ')) {
+          final data = jsonDecode(line.substring(6));
+          final chunk = data['response'] as String;
+          
+          setState(() {
+            if (messages.isNotEmpty && messages.last['sender'] == 'harin') {
+              messages.last['text'] = fullResponse + chunk;
+            } else {
+              messages.add({'sender': 'harin', 'text': chunk});
+            }
+            fullResponse += chunk;
+          });
+          _scrollToBottom();
+        }
+      }
+    } catch (e) {
+      setState(() {
+        messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다.'});
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _scrollToBottom() {
@@ -142,18 +146,50 @@ class _HarinChatState extends State<HarinChat> {
       return;
     }
 
-    final reply = await _generateResponse(
-      initialPrompt,
-      systemPrompt: systemPrompt,
-      mode: newMode == 'book-recommendation' ? 'book' : newMode,
-    );
+    try {
+      final request = http.Request('POST', Uri.parse('${Config.baseUrl}/api/chat/generate-stream'));  // API Gateway URL 사용
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': initialPrompt,
+        'mode': newMode == 'book-recommendation' ? 'book' : newMode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'harin',
+        'name': '하린'
+      });
 
-    setState(() {
-      messages.add({'sender': 'harin', 'text': reply});
-      _isLoading = false;
-    });
+      final response = await request.send();
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
 
-    _scrollToBottom();
+      String fullResponse = '';
+      await for (final line in stream) {
+        if (line.startsWith('data: ')) {
+          final data = jsonDecode(line.substring(6));
+          final chunk = data['response'] as String;
+          
+          setState(() {
+            if (messages.isNotEmpty && messages.last['sender'] == 'harin') {
+              messages.last['text'] = fullResponse + chunk;
+            } else {
+              messages.add({'sender': 'harin', 'text': chunk});
+            }
+            fullResponse += chunk;
+          });
+          _scrollToBottom();
+        }
+      }
+    } catch (e) {
+      setState(() {
+        messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다.'});
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -238,8 +274,8 @@ class _HarinChatState extends State<HarinChat> {
                         color: isHarin ? Colors.white : Colors.purple[100],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: TypingText(
-                        text: msg['text'] ?? '',
+                      child: Text(
+                        msg['text'] ?? '',
                         style: TextStyle(
                           color: isHarin ? Colors.black87 : Colors.deepPurple,
                           fontSize: 15,
@@ -330,75 +366,5 @@ class _HarinChatState extends State<HarinChat> {
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.deepPurple)),
       ],
     );
-  }
-}
-
-// 타자기 스타일 텍스트 출력 위젯
-class TypingText extends StatefulWidget {
-  final String text;
-  final TextStyle? style;
-  final Duration duration;
-
-  const TypingText({
-    super.key,
-    required this.text,
-    this.style,
-    this.duration = const Duration(milliseconds: 30),
-  });
-
-  @override
-  _TypingTextState createState() => _TypingTextState();
-}
-
-class _TypingTextState extends State<TypingText> {
-  String _displayedText = '';
-  Timer? _timer;
-  int _currentIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _startTyping();
-  }
-
-  @override
-  void didUpdateWidget(covariant TypingText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) {
-      _resetTyping();
-    }
-  }
-
-  void _startTyping() {
-    _timer = Timer.periodic(widget.duration, (timer) {
-      if (_currentIndex < widget.text.length) {
-        setState(() {
-          _displayedText += widget.text[_currentIndex];
-          _currentIndex++;
-        });
-      } else {
-        _timer?.cancel();
-      }
-    });
-  }
-
-  void _resetTyping() {
-    _timer?.cancel();
-    setState(() {
-      _displayedText = '';
-      _currentIndex = 0;
-    });
-    _startTyping();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(_displayedText, style: widget.style);
   }
 }
