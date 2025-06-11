@@ -1,4 +1,4 @@
-package com.example.sodam_flutter
+package com.example.Sodam
 
 import io.flutter.embedding.android.FlutterActivity
 

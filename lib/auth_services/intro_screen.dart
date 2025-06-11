@@ -13,7 +13,7 @@ class _IntroScreenState extends State<IntroScreen> {
   static const String _title =
       '너무 친절하진 않아도,\n딱 너한테 맞는 대화. 그게 목표야';
   static const String _bgImage = 'assets/introback.png';
-  static const String _iconImage = 'assets/introicon.png';
+  static const String _iconImage = 'assets/sodam_icon.png';
 
   @override
   void initState() {
