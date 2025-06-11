@@ -60,43 +60,86 @@ class _HarinChatState extends State<HarinChat> {
     });
 
     try {
-      final request = http.Request('POST', Uri.parse('${Config.baseUrl}/api/chat/generate-stream'));  // API Gateway URL 사용
+      final String apiUrl = '${Config.baseUrl}/api/chat/generate'; // 모든 모드에서 단일 엔드포인트 사용
+
+      final request = http.Request('POST', Uri.parse(apiUrl));
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode({
         'model': 'gemma3:4b',
         'prompt': input,
         'mode': mode == 'book-recommendation' ? 'book' : mode,
-        'stream': true,
+        'stream': mode != 'book-recommendation',  // book 모드가 아닐 때만 stream: true
         'system': systemPrompt,
         'character': 'harin',
         'name': '하린'
       });
 
       final response = await request.send();
-      final stream = response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter());
+      
+      if (response.statusCode != 200) {
+        final errorBody = await response.stream.bytesToString();
+        print('Server Error Body: $errorBody'); // 에러 본문 출력
+        throw Exception('서버 오류: ${response.statusCode} - $errorBody');
+      }
 
-      String fullResponse = '';
-      await for (final line in stream) {
-        if (line.startsWith('data: ')) {
-          final data = jsonDecode(line.substring(6));
-          final chunk = data['response'] as String;
-          
+      if (mode == 'book-recommendation') {
+        // 독서 추천 결과를 가짜 스트리밍으로 표시 (단일 응답 처리)
+        final responseBody = await response.stream.bytesToString();
+        final data = jsonDecode(responseBody);
+        final responseText = data['response'] as String;
+        final books = responseText.split('\n\n');
+        
+        // 첫 번째 메시지 추가
+        if (books.isNotEmpty) {
           setState(() {
-            if (messages.isNotEmpty && messages.last['sender'] == 'harin') {
-              messages.last['text'] = fullResponse + chunk;
-            } else {
-              messages.add({'sender': 'harin', 'text': chunk});
-            }
-            fullResponse += chunk;
+            messages.add({'sender': 'harin', 'text': books[0]});
           });
           _scrollToBottom();
         }
+        
+        // 나머지 책들을 순차적으로 표시
+        for (var i = 1; i < books.length; i++) {
+          if (books[i].trim().isEmpty) continue;
+          await Future.delayed(const Duration(milliseconds: 800));
+          setState(() {
+            final currentText = messages.last['text'] ?? '';
+            messages.last['text'] = currentText + '\n\n' + books[i];
+          });
+          _scrollToBottom();
+        }
+      } else {
+        // 일반 채팅은 스트리밍 처리
+        final stream = response.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter());
+
+        String fullResponse = '';
+        await for (final line in stream) {
+          if (line.startsWith('data: ')) { 
+            try {
+              final data = jsonDecode(line.substring(6));
+              if (data['response'] != null) {
+                final chunk = data['response'] as String;
+                fullResponse += chunk;
+                setState(() {
+                  if (messages.isNotEmpty && messages.last['sender'] == 'harin') {
+                    messages.last['text'] = fullResponse;
+                  } else {
+                    messages.add({'sender': 'harin', 'text': fullResponse});
+                  }
+                });
+                _scrollToBottom();
+              }
+            } catch (e) {
+              print('Error parsing JSON for streaming: $e - Line: $line');
+            }
+          }
+        }
       }
     } catch (e) {
+      print('Error in _sendMessage: $e');
       setState(() {
-        messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다.'});
+        messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.'});
       });
     } finally {
       setState(() {
@@ -136,11 +179,10 @@ class _HarinChatState extends State<HarinChat> {
   } else if (newMode == 'poetry-play') {
     initialPrompt = '시 쓰기 놀이를 하자!';
   } else if (newMode == 'book-recommendation') {
-    // 🔽 여기를 아래처럼 수정하세요
     setState(() {
       messages.add({
         'sender': 'harin',
-        'text': '독서추천입니다! 원하는 종류의 책을 적어주시면 책 추천을 해줍니다! 키워드로 검색해보세요!',
+        'text': '어떤 종류의 책을 찾고 계신가요? 제목, 저자, 주제 등 키워드를 입력해주세요!',
       });
       _isLoading = false;
     });

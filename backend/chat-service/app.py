@@ -109,7 +109,7 @@ async def generate(req: GenerateRequest):
 
                 return GenerateResponse(response="\n\n".join(results))
 
-        # 'book' 이외 모드일 경우 LLM API 호출
+        # 'book' 이외 모드일 경우 LLM API 호출 및 스트리밍 처리
         payload: dict = {
             "model": req.model,
             "prompt": req.prompt or "기본 프롬프트",
@@ -118,19 +118,35 @@ async def generate(req: GenerateRequest):
         if req.system:
             payload["system"] = req.system
 
-        print(f"Sending request to Ollama: {payload}")  # Ollama 요청 로깅
-        async with httpx.AsyncClient(timeout=30.0) as client:  # 타임아웃을 30초로 설정
-            resp = await client.post(OLLAMA_API_URL, json=payload)
-            print(f"Ollama response status: {resp.status_code}")  # Ollama 응답 상태 로깅
-            print(f"Ollama response: {resp.text}")  # Ollama 응답 내용 로깅
-            resp.raise_for_status()
-            data = resp.json()
+        if req.stream:
+            async def stream_ollama_response():
+                print(f"Sending streaming request to Ollama: {payload}")  # Ollama 스트리밍 요청 로깅
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    async with client.stream('POST', OLLAMA_API_URL, json=payload) as response:
+                        print(f"Ollama streaming response status: {response.status_code}")  # Ollama 스트리밍 응답 상태 로깅
+                        async for line in response.aiter_lines():
+                            if line:
+                                print(f"Ollama chunk: {line}")  # Ollama 응답 청크 로깅
+                                try:
+                                    data = json.loads(line)
+                                    yield f"data: {json.dumps({'response': data.get('response', '')})}\n\n"
+                                except json.JSONDecodeError:
+                                    print(f"JSON Decode Error for line: {line}")
+                                    continue
+            return StreamingResponse(stream_ollama_response(), media_type="text/event-stream")
+        else:
+            print(f"Sending non-streaming request to Ollama: {payload}")  # Ollama 일반 요청 로깅
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(OLLAMA_API_URL, json=payload)
+                print(f"Ollama response status: {resp.status_code}")  # Ollama 응답 상태 로깅
+                print(f"Ollama response: {resp.text}")  # Ollama 응답 내용 로깅
+                resp.raise_for_status()
+                data = resp.json()
 
-        result = data.get("response")
-        if not result:
-            raise HTTPException(status_code=500, detail="LLM 응답이 비어 있어요.")
-
-        return GenerateResponse(response=result)
+            result = data.get("response")
+            if not result:
+                raise HTTPException(status_code=500, detail="LLM 응답이 비어 있어요.")
+            return GenerateResponse(response=result)
 
     except Exception as e:
         print(f"Error in generate: {str(e)}")  # 오류 로깅
@@ -193,32 +209,4 @@ async def generate_response(request: ChatRequest):
             return ChatResponse(response=f"{profile['name']}: {request.message}")
             
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/chat/generate-stream")
-async def generate_stream(req: GenerateRequest):
-    try:
-        print(f"Stream request received: {req}")  # 요청 로깅
-        async def generate():
-            payload = {
-                "model": req.model,
-                "prompt": req.prompt or "기본 프롬프트",
-                "stream": True,
-            }
-            if req.system:
-                payload["system"] = req.system
-
-            print(f"Sending request to Ollama: {payload}")  # Ollama 요청 로깅
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                async with client.stream('POST', OLLAMA_API_URL, json=payload) as response:
-                    print(f"Ollama response status: {response.status_code}")  # Ollama 응답 상태 로깅
-                    async for line in response.aiter_lines():
-                        if line:
-                            print(f"Ollama chunk: {line}")  # Ollama 응답 청크 로깅
-                            data = json.loads(line)
-                            yield f"data: {json.dumps({'response': data.get('response', '')})}\n\n"
-
-        return StreamingResponse(generate(), media_type="text/event-stream")
-    except Exception as e:
-        print(f"Stream error: {str(e)}")  # 오류 로깅
         raise HTTPException(status_code=500, detail=str(e))
