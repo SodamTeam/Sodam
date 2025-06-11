@@ -62,11 +62,21 @@ class _HarinChatState extends State<HarinChat> {
     try {
       final String apiUrl = '${Config.baseUrl}/api/chat/generate'; // 모든 모드에서 단일 엔드포인트 사용
 
+      // 모드에 따라 prefix 추가
+      String promptWithPrefix = input;
+      if (mode == 'novel-helper') {
+        promptWithPrefix = '소설 쓰기 도와줘! $input';
+      } else if (mode == 'literary-analysis') {
+        promptWithPrefix = '문학 분석 도와줘! $input';
+      } else if (mode == 'poetry-play') {
+        promptWithPrefix = '시 쓰기 놀이를 하자! $input';
+      }
+
       final request = http.Request('POST', Uri.parse(apiUrl));
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode({
         'model': 'gemma3:4b',
-        'prompt': input,
+        'prompt': promptWithPrefix,
         'mode': mode == 'book-recommendation' ? 'book' : mode,
         'stream': mode != 'book-recommendation',  // book 모드가 아닐 때만 stream: true
         'system': systemPrompt,
