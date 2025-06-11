@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'profile_service.dart';
@@ -25,7 +26,7 @@ class _HarinChatState extends State<HarinChat> {
 
   String mode = 'default';
   bool _isLoading = false;
-  String systemPrompt = '';  // 초기값을 빈 문자열로 설정
+  String systemPrompt = ''; // 초기값을 빈 문자열로 설정
 
   final Map<String, String> modeLabels = {
     'novel-helper': '소설 작성 도우미',
@@ -35,12 +36,12 @@ class _HarinChatState extends State<HarinChat> {
     'default': '기본',
   };
 
-  String get _baseUrl => 'http://localhost:8000/generate';  // chat-service의 새로운 URL로 수정
+  String get _baseUrl => 'http://localhost:8000/generate'; // chat-service의 새로운 URL로 수정
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();  // 프로필 로드 함수 호출
+    _loadProfile(); // 프로필 로드 함수 호출
   }
 
   Future<void> _loadProfile() async {
@@ -53,7 +54,7 @@ class _HarinChatState extends State<HarinChat> {
   Future<String> _generateResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/generate'),
+        Uri.parse(_baseUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'model': 'gemma3:4b',
@@ -119,6 +120,7 @@ class _HarinChatState extends State<HarinChat> {
           'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
         }
       ];
+      _isLoading = true;
     });
 
     String initialPrompt = '';
@@ -132,26 +134,24 @@ class _HarinChatState extends State<HarinChat> {
       initialPrompt = '감동적인 책';
     } else {
       initialPrompt = '';
-    }
-
-    if (initialPrompt.isNotEmpty) {
       setState(() {
-        _isLoading = true;
-      });
-
-      final reply = await _generateResponse(
-        initialPrompt,
-        systemPrompt: systemPrompt,
-        mode: newMode == 'book-recommendation' ? 'book' : newMode,
-      );
-
-      setState(() {
-        messages.add({'sender': 'harin', 'text': reply});
         _isLoading = false;
       });
-
-      _scrollToBottom();
+      return;
     }
+
+    final reply = await _generateResponse(
+      initialPrompt,
+      systemPrompt: systemPrompt,
+      mode: newMode == 'book-recommendation' ? 'book' : newMode,
+    );
+
+    setState(() {
+      messages.add({'sender': 'harin', 'text': reply});
+      _isLoading = false;
+    });
+
+    _scrollToBottom();
   }
 
   @override
@@ -236,8 +236,8 @@ class _HarinChatState extends State<HarinChat> {
                         color: isHarin ? Colors.white : Colors.purple[100],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(
-                        msg['text'] ?? '',
+                      child: TypingText(
+                        text: msg['text'] ?? '',
                         style: TextStyle(
                           color: isHarin ? Colors.black87 : Colors.deepPurple,
                           fontSize: 15,
@@ -328,5 +328,75 @@ class _HarinChatState extends State<HarinChat> {
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.deepPurple)),
       ],
     );
+  }
+}
+
+// 타자기 스타일 텍스트 출력 위젯
+class TypingText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final Duration duration;
+
+  const TypingText({
+    super.key,
+    required this.text,
+    this.style,
+    this.duration = const Duration(milliseconds: 30),
+  });
+
+  @override
+  _TypingTextState createState() => _TypingTextState();
+}
+
+class _TypingTextState extends State<TypingText> {
+  String _displayedText = '';
+  Timer? _timer;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTyping();
+  }
+
+  @override
+  void didUpdateWidget(covariant TypingText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      _resetTyping();
+    }
+  }
+
+  void _startTyping() {
+    _timer = Timer.periodic(widget.duration, (timer) {
+      if (_currentIndex < widget.text.length) {
+        setState(() {
+          _displayedText += widget.text[_currentIndex];
+          _currentIndex++;
+        });
+      } else {
+        _timer?.cancel();
+      }
+    });
+  }
+
+  void _resetTyping() {
+    _timer?.cancel();
+    setState(() {
+      _displayedText = '';
+      _currentIndex = 0;
+    });
+    _startTyping();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(_displayedText, style: widget.style);
   }
 }
