@@ -5,6 +5,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'profile_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'config.dart';
 
 class SeraChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -38,7 +41,7 @@ class _SeraChatState extends State<SeraChat> {
     'default': '기본',
   };
 
-  String get _baseUrl => 'http://localhost:8003/api/chat/generate';  // gateway URL로 수정
+  String get _baseUrl => '${Config.baseUrl}/generate';
 
   @override
   void initState() {
@@ -53,45 +56,30 @@ class _SeraChatState extends State<SeraChat> {
     });
   }
 
-  Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
+  Future<String> _generateResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
     try {
-      final url = Uri.parse(_baseUrl);
-      final body = {
-        "model": "gemma3:4b",
-        "prompt": prompt,
-        "stream": false,
-      };
-
-      if (systemPrompt != null && systemPrompt.isNotEmpty) {
-        body["system"] = systemPrompt;
-      }
-
-      if (mode != null && mode.isNotEmpty) {
-        body["mode"] = mode;
-      }
-
-      print('Sending request to: $url');
-      print('Request body: $body');
-
       final response = await http.post(
-        url,
+        Uri.parse('http://localhost:8000/generate'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': input,
+          'mode': mode,
+          'stream': false,
+          'system': systemPrompt,
+          'character': 'sera',
+          'name': '세라'
+        }),
       );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("LLM 응답 원본: $data");
-        return data['response'] ?? '응답을 이해하지 못했어요.';
+        return data['response'];
       } else {
-        return 'AI 서버 오류: ${response.statusCode}';
+        throw Exception('Failed to generate response');
       }
     } catch (e) {
-      print('Error occurred: $e');
-      return 'AI 연결 실패: $e';
+      return '죄송합니다. 오류가 발생했습니다.';
     }
   }
 

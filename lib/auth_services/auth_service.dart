@@ -4,14 +4,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
+import '../config.dart';
 
 class AuthService {
-  /// 실제 안드로이드 기기에서는 컴퓨터의 IP 주소를 사용
-  /// 배포 시 --dart-define=BACKEND_URL=https://api.example.com 형태로 덮어쓸 수 있음.
-  static const String _baseUrl = String.fromEnvironment(
-    'BACKEND_URL',
-    defaultValue: 'http://localhost:8003',  // API Gateway 포트로 수정
-  );
+  static String get _baseUrl => Config.baseUrl;
 
   static final FlutterSecureStorage _storage = FlutterSecureStorage();
 
