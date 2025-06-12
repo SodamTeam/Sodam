@@ -1,11 +1,15 @@
+# backend/gateway/app.py
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import httpx
 import os
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import json
 
 app = FastAPI(title="Sodam API Gateway")
 
@@ -30,17 +34,46 @@ http_client = httpx.AsyncClient(timeout=30.0)
 
 # 채팅 서비스 라우팅
 @app.post("/api/chat/generate")
-async def generate_chat(request: dict):
+async def handle_chat_generate(request: Request):
     try:
-        print(f"Chat request: {request}")  # 디버깅용 로그
-        response = await http_client.post(
-            f"{CHAT_SERVICE_URL}/generate",
-            json=request
-        )
-        print(f"Chat response: {response.status_code} - {response.text}")  # 디버깅용 로그
-        return response.json()
+        request_data = await request.json()
+        is_stream = request_data.get("stream", False)
+
+        if is_stream:
+            async def stream_response():
+                try:
+                    async with httpx.AsyncClient() as client:
+                        async with client.stream(
+                            'POST',
+                            f"{CHAT_SERVICE_URL}/generate", # chat-service의 올바른 엔드포인트
+                            json=request_data,
+                            timeout=30.0
+                        ) as response:
+                            if response.status_code != 200:
+                                error_text = await response.text()
+                                yield f"data: {json.dumps({'error': error_text})}\n\n"
+                                return
+                            async for chunk in response.aiter_bytes():
+                                yield chunk
+                except Exception as e:
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+            return StreamingResponse(
+                stream_response(),
+                media_type="text/event-stream"
+            )
+        else:
+            # 비스트리밍 요청 처리
+            response = await http_client.post(
+                f"{CHAT_SERVICE_URL}/generate", # chat-service의 올바른 엔드포인트
+                json=request_data
+            )
+            response.raise_for_status()
+            return response.json()
+
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=str(e.response.text))
     except Exception as e:
-        print(f"Chat error: {str(e)}")  # 디버깅용 로그
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chat")

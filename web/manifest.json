@@ -1,6 +1,6 @@
 {
-    "name": "sodam_flutter",
-    "short_name": "sodam_flutter",
+    "name": "Sodam",
+    "short_name": "Sodam",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

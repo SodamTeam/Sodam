@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "sodam_flutter" "\0"
+            VALUE "FileDescription", "Sodam" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "sodam_flutter" "\0"
+            VALUE "InternalName", "Sodam" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "sodam_flutter.exe" "\0"
-            VALUE "ProductName", "sodam_flutter" "\0"
+            VALUE "OriginalFilename", "Sodam.exe" "\0"
+            VALUE "ProductName", "Sodam" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
