@@ -81,7 +81,11 @@ def get_profile(username: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Profile not found")
     return profile
 
-@app.post("/api/profile/{username}", response_model=schemas.Profile)
+@app.get("/api/profile/{username}", response_model=schemas.Profile)  # ◆ 추가: 이 줄을 삽입
+def get_profile_api(username: str, db: Session = Depends(get_db)):  # ◆ 추가: 함수명만 변경해도 OK
+    return get_profile(username, db)
+
+@app.post("/{username}", response_model=schemas.Profile)
 def create_profile(username: str, profile: schemas.ProfileCreate, db: Session = Depends(get_db)):
     db_profile = models.Profile(**profile.dict())
     db.add(db_profile)

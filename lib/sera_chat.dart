@@ -1,9 +1,13 @@
-import 'package:flutter/material.dart';
+// Sodam/lib/sera_chart.dart
+
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'chat_service.dart';
+import 'profile_service.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'profile_service.dart';
-import 'package:flutter/foundation.dart';
 import 'config.dart';
 import 'chat_service.dart';
 
@@ -18,16 +22,17 @@ class SeraChat extends StatefulWidget {
 class _SeraChatState extends State<SeraChat> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final int userId = 2;
-  final ChatService chatService = ChatService();
+  final FocusNode _textFieldFocus = FocusNode();
+  final ChatService chatService = ChatService(); // ◆ 수정: chatService 인스턴스 추가
+  final int userId = 3; // ◆ 수정: userId 정의
 
   List<Map<String, String>> messages = [
-    {'sender': 'sera','text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?',}
+    {'sender': 'sera', 'text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?'},
   ];
 
   String mode = 'default';
   bool _isLoading = false;
-  String systemPrompt = '';  // 초기값을 빈 문자열로 설정
+  String systemPrompt = ''; // 초기값을 빈 문자열로 설정
 
   final Map<String, String> modeLabels = {
     'coding-helper': '코딩 도우미',
@@ -37,13 +42,12 @@ class _SeraChatState extends State<SeraChat> {
     'default': '기본',
   };
 
-  String get _baseUrl => 
-      '${Config.baseUrl}/api/chat/generate';
+  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();  // 프로필 로드 함수 호출
+    _loadProfile(); // 프로필 로드 함수 호출
     _loadHistory();
   }
 
@@ -51,9 +55,9 @@ class _SeraChatState extends State<SeraChat> {
     try {
       final hist = await chatService.fetchHistory(
         userId,
-        'harin',
-      ); // ◆ 사용자 아이디, 캐릭터 키는 상황에 맞게 변경
-      final loaded =
+        'sera',
+      ); // ◆ 수정: 'sera' 채팅방으로 로드
+      final List<Map<String, String>> loaded =
           hist
               .map(
                 (e) => {
@@ -63,15 +67,16 @@ class _SeraChatState extends State<SeraChat> {
               )
               .toList();
 
-      if (loaded.isNotEmpty) {
-        setState(() {
-          // --- 수정 시작: 기존 messages(인사말 등)는 유지하고, 서버 히스토리만 뒤에 붙이기 ---
-          messages.addAll(loaded);
-          // --- 수정 끝 ---
-        });
-        _scrollToBottom();
-      }
-      // loaded가 비어 있으면 아무것도 안 함 → 인사말만 화면에 남음
+      setState(() {
+        messages = [
+          {
+            'sender': 'sera',
+            'text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?',
+          },
+          ...loaded,
+        ];
+      });
+      _scrollToBottom();
     } catch (e) {
       print('히스토리 로드 에러: $e');
     }
@@ -85,11 +90,13 @@ class _SeraChatState extends State<SeraChat> {
   }
 
   Future<String> _generateResponse(
-    String input, 
-    {String? systemPrompt, String mode = 'chat'
-    }) async {
+    String input, {
+    String? systemPrompt,
+    String mode = 'chat',
+  }) async {
     try {
       final response = await http.post(
+        Uri.parse(_baseUrl),
         Uri.parse(_baseUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -99,13 +106,13 @@ class _SeraChatState extends State<SeraChat> {
           'stream': false,
           'system': systemPrompt,
           'character': 'sera',
-          'name': '세라'
+          'name': '세라',
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['response'];
+        return data['response'] as String;
       } else {
         throw Exception('Failed to generate response');
       }
@@ -117,16 +124,21 @@ class _SeraChatState extends State<SeraChat> {
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
+
+    await chatService.saveHistory(userId, 'sera', 'user', input);
+
     setState(() {
       messages.add({'sender': 'user', 'text': input});
       _controller.clear();
       _isLoading = true;
     });
 
-// 하린과 비교  (이 메서드의 끝까지)
+    _scrollToBottom();
+
+    await chatService.saveHistory(userId, 'sera', 'user', input);
 
     try {
-      final String apiUrl = '${Config.baseUrl}/api/chat/generate';
+      final String apiUrl = _baseUrl;
 
       // 이전 대화 내용을 포함한 프롬프트 생성
       String conversationHistory = '';
@@ -151,57 +163,38 @@ class _SeraChatState extends State<SeraChat> {
       } else if (mode == 'learning-path') {
         promptWithPrefix = '학습 로드맵을 만들어줘!\n$conversationHistory';
       }
+      final resp = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': promptWithPrefix,
+          'mode': mode,
+          'stream': false, // 스트림 비활성화
+          'system': systemPrompt,
+          'character': 'sera',
+          'name': '세라',
+        }),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('서버 오류 ${resp.statusCode}');
+      }
 
-      final request = http.Request('POST', Uri.parse(apiUrl));
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode({
-        'model': 'gemma3:4b',
-        'prompt': promptWithPrefix,
-        'mode': mode,
-        'stream': true,
-        'system': systemPrompt,
-        'character': 'sera',
-        'name': '세라'
+      final data = jsonDecode(resp.body);
+      final String reply = data['response'] as String; // 전체 응답 키로 파싱
+
+      setState(() {
+        messages.add({'sender': 'sera', 'text': reply});
       });
-
-      final response = await request.send();
-      
-      if (response.statusCode != 200) {
-        final errorBody = await response.stream.bytesToString();
-        print('Server Error Body: $errorBody');
-        throw Exception('서버 오류: ${response.statusCode} - $errorBody');
-      }
-
-      final stream = response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter());
-
-      String fullResponse = '';
-      await for (final line in stream) {
-        if (line.startsWith('data: ')) {
-          try {
-            final data = jsonDecode(line.substring(6));
-            if (data['response'] != null) {
-              final chunk = data['response'] as String;
-              fullResponse += chunk;
-              setState(() {
-                if (messages.isNotEmpty && messages.last['sender'] == 'sera') {
-                  messages.last['text'] = fullResponse;
-                } else {
-                  messages.add({'sender': 'sera', 'text': fullResponse});
-                }
-              });
-              _scrollToBottom();
-            }
-          } catch (e) {
-            print('Error parsing JSON for streaming: $e - Line: $line');
-          }
-        }
-      }
+      await chatService.saveHistory(userId, 'sera', 'sera', reply);
+      _scrollToBottom();
     } catch (e) {
       print('Error in _sendMessage: $e');
       setState(() {
-        messages.add({'sender': 'sera', 'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.'});
+        messages.add({
+          'sender': 'sera',
+          'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+        });
       });
     } finally {
       setState(() {
@@ -228,8 +221,9 @@ class _SeraChatState extends State<SeraChat> {
       messages = [
         {
           'sender': 'sera',
-          'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
-        }
+          'text':
+              '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
+        },
       ];
     });
 
@@ -261,9 +255,17 @@ class _SeraChatState extends State<SeraChat> {
         messages.add({'sender': 'sera', 'text': reply});
         _isLoading = false;
       });
-
+      await chatService.saveHistory(userId, 'sera', 'sera', reply);
       _scrollToBottom();
     }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    _textFieldFocus.dispose();
+    super.dispose();
   }
 
   @override
@@ -274,40 +276,39 @@ class _SeraChatState extends State<SeraChat> {
         child: Column(
           children: [
             // 상단 헤더
-Container(
-  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-  decoration: const BoxDecoration(
-    border: Border(
-      bottom: BorderSide(color: Colors.grey),
-    ),
-  ),
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      IconButton(
-        onPressed: widget.goBack,
-        icon: const Icon(Icons.chevron_left),
-      ),
-      const Text(
-        '세라',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-      Row(
-        children: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications),
-          ),
-          const CircleAvatar(
-            radius: 16,
-            backgroundImage: AssetImage('assets/sera_chat.jpg'), // ← 수정된 부분
-          ),
-        ],
-      ),
-    ],
-  ),
-),
-
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    onPressed: widget.goBack,
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                  const Text(
+                    '세라',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.notifications),
+                      ),
+                      const CircleAvatar(
+                        radius: 16,
+                        backgroundImage: NetworkImage(
+                          'https://randomuser.me/api/portraits/women/44.jpg',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             // 채팅 헤더
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -333,16 +334,23 @@ Container(
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: messages.length,
                 itemBuilder: (context, idx) {
                   final msg = messages[idx];
                   final isSera = msg['sender'] == 'sera';
                   return Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    alignment: isSera ? Alignment.centerLeft : Alignment.centerRight,
+                    alignment:
+                        isSera ? Alignment.centerLeft : Alignment.centerRight,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: isSera ? Colors.white : Colors.blue[100],
                         borderRadius: BorderRadius.circular(16),
@@ -367,19 +375,25 @@ Container(
                 runSpacing: 8,
                 children: [
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('coding-helper'),
+                    onPressed:
+                        _isLoading ? null : () => _changeMode('coding-helper'),
                     child: const Text('💻 코딩 도우미'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('tech-explainer'),
+                    onPressed:
+                        _isLoading ? null : () => _changeMode('tech-explainer'),
                     child: const Text('🔧 기술 설명'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('debug-assistant'),
+                    onPressed:
+                        _isLoading
+                            ? null
+                            : () => _changeMode('debug-assistant'),
                     child: const Text('🐛 디버깅 도우미'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('learning-path'),
+                    onPressed:
+                        _isLoading ? null : () => _changeMode('learning-path'),
                     child: const Text('📚 학습 로드맵'),
                   ),
                 ],
@@ -389,9 +403,7 @@ Container(
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey)),
               ),
               child: Row(
                 children: [
@@ -405,7 +417,10 @@ Container(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(20)),
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ),
@@ -418,10 +433,31 @@ Container(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text('전송'),
                   ),
+                ],
+              ),
+            ),
+            // 하단 네비게이션
+            Container(
+              height: 56,
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey)),
+                color: Colors.white,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _navItem(Icons.home, '홈'),
+                  _navItem(Icons.smart_toy, 'AI'),
+                  _navItem(Icons.search, '탐색'),
+                  _navItem(Icons.settings, '설정'),
+                  _navItem(Icons.person, '나'),
                 ],
               ),
             ),

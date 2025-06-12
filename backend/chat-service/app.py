@@ -33,16 +33,17 @@ def get_db():
         db.close()
 
 # API 설정
-OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/generate")
+OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/chat")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemma3:4b")
 GOOGLE_BOOKS_API = "https://www.googleapis.com/books/v1/volumes"
 API_GATEWAY_URL = "http://localhost:8000"  # API Gateway URL로 변경
 
 class GenerateRequest(BaseModel):
     model: str
+    messages: List[dict] | None = None
     prompt: str | None = None
     mode: str  # 'novel', 'analyze', 'poem', 'book'
-    stream: bool = False
+    stream: bool = True
     system: str | None = None
     character: str | None = None
     name: str | None = None
@@ -57,7 +58,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
-@app.post("/generate", response_model=GenerateResponse)
+@app.post("/api/chat/generate", response_model=GenerateResponse)
 async def generate(req: GenerateRequest):
     try:
         print(f"Generate request received: {req}")  # 요청 로깅
@@ -71,14 +72,13 @@ async def generate(req: GenerateRequest):
                 if profile_response.status_code == 200:
                     profile = profile_response.json()
                     system_name = req.name if req.name else profile['name']
-                    req.system = f"""
+                    system_message = f"""
                     네 이름은 {system_name}이야. 너는 {profile['description']}이야.
                     {profile['personality']}
                     관심사: {profile['interests']}
                     배경: {profile['background']}
                     항상 {system_name}으로서 대답해.
                     """
-                    print(f"System prompt created: {req.system}")  # 시스템 프롬프트 로깅
 
         # 'book' 모드일 경우 Google Books API 사용
         if req.mode == "book":
@@ -111,14 +111,20 @@ async def generate(req: GenerateRequest):
 
                 return GenerateResponse(response="\n\n".join(results))
 
-        # 'book' 이외 모드일 경우 LLM API 호출 및 스트리밍 처리
-        payload: dict = {
+        # Ollama API 호출을 위한 메시지 구성
+        messages = []
+        if req.system:
+            messages.append({"role": "system", "content": req.system})
+        if req.prompt:
+            messages.append({"role": "user", "content": req.prompt})
+        if req.messages:
+            messages.extend(req.messages)
+
+        payload = {
             "model": req.model,
-            "prompt": req.prompt or "기본 프롬프트",
+            "messages": messages,
             "stream": req.stream,
         }
-        if req.system:
-            payload["system"] = req.system
 
         if req.stream:
             async def stream_ollama_response():
@@ -131,7 +137,8 @@ async def generate(req: GenerateRequest):
                                 print(f"Ollama chunk: {line}")  # Ollama 응답 청크 로깅
                                 try:
                                     data = json.loads(line)
-                                    yield f"data: {json.dumps({'response': data.get('response', '')})}\n\n"
+                                    if 'message' in data:
+                                        yield f"data: {json.dumps({'response': data['message']['content']})}\n\n"
                                 except json.JSONDecodeError:
                                     print(f"JSON Decode Error for line: {line}")
                                     continue
@@ -145,7 +152,7 @@ async def generate(req: GenerateRequest):
                 resp.raise_for_status()
                 data = resp.json()
 
-            result = data.get("response")
+            result = data.get("message", {}).get("content")
             if not result:
                 raise HTTPException(status_code=500, detail="LLM 응답이 비어 있어요.")
             return GenerateResponse(response=result)
@@ -153,6 +160,11 @@ async def generate(req: GenerateRequest):
     except Exception as e:
         print(f"Error in generate: {str(e)}")  # 오류 로깅
         raise HTTPException(status_code=500, detail=f"서버 오류: {e}")
+
+@app.post("/generate", response_model=GenerateResponse)
+async def generate_alias(request: GenerateRequest):
+    # /api/chat/generate 로직을 그대로 호출하는 alias 엔드포인트
+    return await generate(request)
 
 @app.post("/chat", response_model=schemas.ChatResponse)
 async def create_chat(chat: schemas.ChatCreate, db: Session = Depends(get_db)):
@@ -210,5 +222,13 @@ async def generate_response(request: ChatRequest):
             # 임시로 에코 응답
             return ChatResponse(response=f"{profile['name']}: {request.message}")
             
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/message")
+async def save_message(message: dict):
+    try:
+        # 여기에 메시지 저장 로직 구현
+        return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
