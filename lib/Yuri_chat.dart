@@ -8,6 +8,7 @@ import 'chat_service.dart';
 import 'profile_service.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'config.dart';
 
 class YuriChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -93,17 +94,89 @@ class _YuriChatState extends State<YuriChat> {
       _isLoading = true;
     });
 
-    final reply = await _generateResponse(
-      input,
-      systemPrompt: systemPrompt,
-      mode: mode,
-    );
+    try {
+      final String apiUrl = '${Config.baseUrl}/api/chat/generate';
 
-    setState(() {
-      messages.add({'sender': 'yuri', 'text': reply});
-      _isLoading = false;
-    });
-    _scrollToBottom();
+      // 이전 대화 내용을 포함한 프롬프트 생성
+      String conversationHistory = '';
+      for (var i = 0; i < messages.length - 1; i++) {
+        final message = messages[i];
+        if (message['sender'] == 'user') {
+          conversationHistory += '사용자: ${message['text']}\n';
+        } else {
+          conversationHistory += '유리: ${message['text']}\n';
+        }
+      }
+      conversationHistory += '사용자: $input';
+
+      // 모드에 따라 prefix 추가
+      String promptWithPrefix = conversationHistory;
+      if (mode == 'science-explainer') {
+        promptWithPrefix = '과학 현상을 설명해줘!\n$conversationHistory';
+      } else if (mode == 'experiment-helper') {
+        promptWithPrefix = '실험을 도와줘!\n$conversationHistory';
+      } else if (mode == 'nature-explorer') {
+        promptWithPrefix = '자연 현상을 탐험해보자!\n$conversationHistory';
+      } else if (mode == 'science-news') {
+        promptWithPrefix = '최신 과학 뉴스를 알려줘!\n$conversationHistory';
+      }
+
+      final request = http.Request('POST', Uri.parse(apiUrl));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': promptWithPrefix,
+        'mode': mode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'yuri',
+        'name': '유리'
+      });
+
+      final response = await request.send();
+      
+      if (response.statusCode != 200) {
+        final errorBody = await response.stream.bytesToString();
+        print('Server Error Body: $errorBody');
+        throw Exception('서버 오류: ${response.statusCode} - $errorBody');
+      }
+
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      String fullResponse = '';
+      await for (final line in stream) {
+        if (line.startsWith('data: ')) {
+          try {
+            final data = jsonDecode(line.substring(6));
+            if (data['response'] != null) {
+              final chunk = data['response'] as String;
+              fullResponse += chunk;
+              setState(() {
+                if (messages.isNotEmpty && messages.last['sender'] == 'yuri') {
+                  messages.last['text'] = fullResponse;
+                } else {
+                  messages.add({'sender': 'yuri', 'text': fullResponse});
+                }
+              });
+              _scrollToBottom();
+            }
+          } catch (e) {
+            print('Error parsing JSON for streaming: $e - Line: $line');
+          }
+        }
+      }
+    } catch (e) {
+      print('Error in _sendMessage: $e');
+      setState(() {
+        messages.add({'sender': 'yuri', 'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.'});
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _scrollToBottom() {

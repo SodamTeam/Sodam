@@ -37,8 +37,6 @@ class _HarinChatState extends State<HarinChat> {
     'default': '기본',
   };
 
-  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';  // API Gateway 엔드포인트 사용
-
   @override
   void initState() {
     super.initState();
@@ -52,33 +50,6 @@ class _HarinChatState extends State<HarinChat> {
     });
   }
 
-  Future<String> _generateResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
-    try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),  // _baseUrl 사용
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'model': 'gemma3:4b',
-          'prompt': input,
-          'mode': mode,
-          'stream': false,
-          'system': systemPrompt,
-          'character': 'harin',
-          'name': '하린'
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['response'];
-      } else {
-        throw Exception('Failed to generate response');
-      }
-    } catch (e) {
-      return '죄송합니다. 오류가 발생했습니다.';
-    }
-  }
-
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
@@ -88,17 +59,115 @@ class _HarinChatState extends State<HarinChat> {
       _isLoading = true;
     });
 
-    final reply = await _generateResponse(
-      input,
-      systemPrompt: systemPrompt,
-      mode: mode == 'book-recommendation' ? 'book' : mode,
-    );
+    try {
+      final String apiUrl = '${Config.baseUrl}/api/chat/generate';
 
-    setState(() {
-      messages.add({'sender': 'harin', 'text': reply});
-      _isLoading = false;
-    });
-    _scrollToBottom();
+      // 이전 대화 내용을 포함한 프롬프트 생성
+      String conversationHistory = '';
+      for (var i = 0; i < messages.length - 1; i++) {
+        final message = messages[i];
+        if (message['sender'] == 'user') {
+          conversationHistory += '사용자: ${message['text']}\n';
+        } else {
+          conversationHistory += '하린: ${message['text']}\n';
+        }
+      }
+      conversationHistory += '사용자: $input';
+
+      // 모드에 따라 prefix 추가
+      String promptWithPrefix = conversationHistory;
+      if (mode == 'novel-helper') {
+        promptWithPrefix = '소설 쓰기 도와줘!\n$conversationHistory';
+      } else if (mode == 'literary-analysis') {
+        promptWithPrefix = '문학 분석 도와줘!\n$conversationHistory';
+      } else if (mode == 'poetry-play') {
+        promptWithPrefix = '시 쓰기 놀이를 하자!\n$conversationHistory';
+      }
+
+      final request = http.Request('POST', Uri.parse(apiUrl));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': promptWithPrefix,
+        'mode': mode == 'book-recommendation' ? 'book' : mode,
+        'stream': mode != 'book-recommendation',
+        'system': systemPrompt,
+        'character': 'harin',
+        'name': '하린'
+      });
+
+      final response = await request.send();
+      
+      if (response.statusCode != 200) {
+        final errorBody = await response.stream.bytesToString();
+        print('Server Error Body: $errorBody'); // 에러 본문 출력
+        throw Exception('서버 오류: ${response.statusCode} - $errorBody');
+      }
+
+      if (mode == 'book-recommendation') {
+        // 독서 추천 결과를 가짜 스트리밍으로 표시 (단일 응답 처리)
+        final responseBody = await response.stream.bytesToString();
+        final data = jsonDecode(responseBody);
+        final responseText = data['response'] as String;
+        final books = responseText.split('\n\n');
+        
+        // 첫 번째 메시지 추가
+        if (books.isNotEmpty) {
+          setState(() {
+            messages.add({'sender': 'harin', 'text': books[0]});
+          });
+          _scrollToBottom();
+        }
+        
+        // 나머지 책들을 순차적으로 표시
+        for (var i = 1; i < books.length; i++) {
+          if (books[i].trim().isEmpty) continue;
+          await Future.delayed(const Duration(milliseconds: 800));
+          setState(() {
+            final currentText = messages.last['text'] ?? '';
+            messages.last['text'] = currentText + '\n\n' + books[i];
+          });
+          _scrollToBottom();
+        }
+      } else {
+        // 일반 채팅은 스트리밍 처리
+        final stream = response.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter());
+
+        String fullResponse = '';
+        await for (final line in stream) {
+          if (line.startsWith('data: ')) { 
+            try {
+              final data = jsonDecode(line.substring(6));
+              if (data['response'] != null) {
+                final chunk = data['response'] as String;
+                fullResponse += chunk;
+                setState(() {
+                  if (messages.isNotEmpty && messages.last['sender'] == 'harin') {
+                    messages.last['text'] = fullResponse;
+                  } else {
+                    messages.add({'sender': 'harin', 'text': fullResponse});
+                  }
+                });
+                _scrollToBottom();
+              }
+            } catch (e) {
+              print('Error parsing JSON for streaming: $e - Line: $line');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error in _sendMessage: $e');
+      setState(() {
+        messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.'});
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _scrollToBottom() {
@@ -112,48 +181,87 @@ class _HarinChatState extends State<HarinChat> {
       }
     });
   }
-
   void _changeMode(String newMode) async {
-    setState(() {
-      mode = newMode;
-      messages = [
-        {
-          'sender': 'harin',
-          'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
-        }
-      ];
-      _isLoading = true;
-    });
+  setState(() {
+    mode = newMode;
+    messages = [
+      {
+        'sender': 'harin',
+        'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
+      }
+    ];
+    _isLoading = true;
+  });
 
-    String initialPrompt = '';
-    if (newMode == 'novel-helper') {
-      initialPrompt = '소설 작성을 도와줘!';
-    } else if (newMode == 'literary-analysis') {
-      initialPrompt = '문학 분석을 도와줘!';
-    } else if (newMode == 'poetry-play') {
-      initialPrompt = '시 쓰기 놀이를 하자!';
-    } else if (newMode == 'book-recommendation') {
-      initialPrompt = '감동적인 책';
-    } else {
-      initialPrompt = '';
+  String initialPrompt = '';
+  if (newMode == 'novel-helper') {
+    initialPrompt = '소설 작성을 도와줘!';
+  } else if (newMode == 'literary-analysis') {
+    initialPrompt = '문학 분석을 도와줘!';
+  } else if (newMode == 'poetry-play') {
+    initialPrompt = '시 쓰기 놀이를 하자!';
+  } else if (newMode == 'book-recommendation') {
+    setState(() {
+      messages.add({
+        'sender': 'harin',
+        'text': '어떤 종류의 책을 찾고 계신가요? 제목, 저자, 주제 등 키워드를 입력해주세요!',
+      });
+      _isLoading = false;
+    });
+    _scrollToBottom();
+    return;
+  } else {
+    initialPrompt = '';
+    setState(() {
+      _isLoading = false;
+    });
+    return;
+  }
+
+    try {
+      final request = http.Request('POST', Uri.parse('${Config.baseUrl}/api/chat/generate-stream'));  // API Gateway URL 사용
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': initialPrompt,
+        'mode': newMode == 'book-recommendation' ? 'book' : newMode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'harin',
+        'name': '하린'
+      });
+
+      final response = await request.send();
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      String fullResponse = '';
+      await for (final line in stream) {
+        if (line.startsWith('data: ')) {
+          final data = jsonDecode(line.substring(6));
+          final chunk = data['response'] as String;
+          
+          setState(() {
+            if (messages.isNotEmpty && messages.last['sender'] == 'harin') {
+              messages.last['text'] = fullResponse + chunk;
+            } else {
+              messages.add({'sender': 'harin', 'text': chunk});
+            }
+            fullResponse += chunk;
+          });
+          _scrollToBottom();
+        }
+      }
+    } catch (e) {
+      setState(() {
+        messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다.'});
+      });
+    } finally {
       setState(() {
         _isLoading = false;
       });
-      return;
     }
-
-    final reply = await _generateResponse(
-      initialPrompt,
-      systemPrompt: systemPrompt,
-      mode: newMode == 'book-recommendation' ? 'book' : newMode,
-    );
-
-    setState(() {
-      messages.add({'sender': 'harin', 'text': reply});
-      _isLoading = false;
-    });
-
-    _scrollToBottom();
   }
 
   @override
@@ -238,8 +346,8 @@ class _HarinChatState extends State<HarinChat> {
                         color: isHarin ? Colors.white : Colors.purple[100],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: TypingText(
-                        text: msg['text'] ?? '',
+                      child: Text(
+                        msg['text'] ?? '',
                         style: TextStyle(
                           color: isHarin ? Colors.black87 : Colors.deepPurple,
                           fontSize: 15,
@@ -330,75 +438,5 @@ class _HarinChatState extends State<HarinChat> {
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.deepPurple)),
       ],
     );
-  }
-}
-
-// 타자기 스타일 텍스트 출력 위젯
-class TypingText extends StatefulWidget {
-  final String text;
-  final TextStyle? style;
-  final Duration duration;
-
-  const TypingText({
-    super.key,
-    required this.text,
-    this.style,
-    this.duration = const Duration(milliseconds: 30),
-  });
-
-  @override
-  _TypingTextState createState() => _TypingTextState();
-}
-
-class _TypingTextState extends State<TypingText> {
-  String _displayedText = '';
-  Timer? _timer;
-  int _currentIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _startTyping();
-  }
-
-  @override
-  void didUpdateWidget(covariant TypingText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) {
-      _resetTyping();
-    }
-  }
-
-  void _startTyping() {
-    _timer = Timer.periodic(widget.duration, (timer) {
-      if (_currentIndex < widget.text.length) {
-        setState(() {
-          _displayedText += widget.text[_currentIndex];
-          _currentIndex++;
-        });
-      } else {
-        _timer?.cancel();
-      }
-    });
-  }
-
-  void _resetTyping() {
-    _timer?.cancel();
-    setState(() {
-      _displayedText = '';
-      _currentIndex = 0;
-    });
-    _startTyping();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(_displayedText, style: widget.style);
   }
 }
