@@ -1,6 +1,13 @@
+<<<<<<< HEAD
 # backend/gateway/requirements.txt
 
 fastapi==0.68.0
 uvicorn==0.15.0
 httpx==0.24.0
 python-dotenv==0.19.0 
+=======
+fastapi==0.104.1
+uvicorn==0.24.0
+httpx==0.25.1
+python-dotenv==1.0.0 
+>>>>>>> 4364be74933165036c85e9fd06094caaf0309666

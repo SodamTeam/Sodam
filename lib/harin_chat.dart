@@ -1,9 +1,10 @@
-// Sodam/lib//harin_chat.dart
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'profile_service.dart';
 import 'package:flutter/foundation.dart';
+import 'config.dart';
 
 class HarinChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -26,8 +27,7 @@ class _HarinChatState extends State<HarinChat> {
 
   String mode = 'default';
   bool _isLoading = false;
-
-  final String systemPrompt = ProfileService.getProfile('harin');
+  String systemPrompt = ''; // 초기값을 빈 문자열로 설정
 
   final Map<String, String> modeLabels = {
     'novel-helper': '소설 작성 도우미',
@@ -37,48 +37,45 @@ class _HarinChatState extends State<HarinChat> {
     'default': '기본',
   };
 
-  // gateway를 통한 경로로 변경
-  String get _baseUrl => 'http://192.168.46.163:8003/api/generate';  // 실제 안드로이드 기기용 IP
+  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';  // API Gateway 엔드포인트 사용
 
-  Future<String> _generateResponse(String prompt, {String? systemPrompt, String? mode}) async {
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile(); // 프로필 로드 함수 호출
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await ProfileService.getProfile('harin');
+    setState(() {
+      systemPrompt = profile;
+    });
+  }
+
+  Future<String> _generateResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
     try {
-      final url = Uri.parse(_baseUrl);
-      final body = {
-        "model": "gemma3:4b",
-        "prompt": prompt,
-        "stream": false,
-      };
-
-      if (systemPrompt != null && systemPrompt.isNotEmpty) {
-        body["system"] = systemPrompt;
-      }
-
-      if (mode != null && mode.isNotEmpty) {
-        body["mode"] = mode;
-      }
-
-      print('Sending request to: $url');
-      print('Request body: $body');
-
       final response = await http.post(
-        url,
+        Uri.parse(_baseUrl),  // _baseUrl 사용
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': input,
+          'mode': mode,
+          'stream': false,
+          'system': systemPrompt,
+          'character': 'harin',
+          'name': '하린'
+        }),
       );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("LLM 응답 원본: $data");
-        return data['response'] ?? '응답을 이해하지 못했어요.';
+        return data['response'];
       } else {
-        return 'AI 서버 오류: ${response.statusCode}';
+        throw Exception('Failed to generate response');
       }
     } catch (e) {
-      print('Error occurred: $e');
-      return 'AI 연결 실패: $e';
+      return '죄송합니다. 오류가 발생했습니다.';
     }
   }
 
@@ -125,26 +122,38 @@ class _HarinChatState extends State<HarinChat> {
           'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
         }
       ];
+      _isLoading = true;
     });
 
-    if (newMode == 'book-recommendation') {
+    String initialPrompt = '';
+    if (newMode == 'novel-helper') {
+      initialPrompt = '소설 작성을 도와줘!';
+    } else if (newMode == 'literary-analysis') {
+      initialPrompt = '문학 분석을 도와줘!';
+    } else if (newMode == 'poetry-play') {
+      initialPrompt = '시 쓰기 놀이를 하자!';
+    } else if (newMode == 'book-recommendation') {
+      initialPrompt = '감동적인 책';
+    } else {
+      initialPrompt = '';
       setState(() {
-        _isLoading = true;
-      });
-
-      final reply = await _generateResponse(
-        "감동적인 책",
-        systemPrompt: systemPrompt,
-        mode: "book",
-      );
-
-      setState(() {
-        messages.add({'sender': 'harin', 'text': reply});
         _isLoading = false;
       });
-
-      _scrollToBottom();
+      return;
     }
+
+    final reply = await _generateResponse(
+      initialPrompt,
+      systemPrompt: systemPrompt,
+      mode: newMode == 'book-recommendation' ? 'book' : newMode,
+    );
+
+    setState(() {
+      messages.add({'sender': 'harin', 'text': reply});
+      _isLoading = false;
+    });
+
+    _scrollToBottom();
   }
 
   @override
@@ -229,8 +238,8 @@ class _HarinChatState extends State<HarinChat> {
                         color: isHarin ? Colors.white : Colors.purple[100],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(
-                        msg['text'] ?? '',
+                      child: TypingText(
+                        text: msg['text'] ?? '',
                         style: TextStyle(
                           color: isHarin ? Colors.black87 : Colors.deepPurple,
                           fontSize: 15,
@@ -307,26 +316,6 @@ class _HarinChatState extends State<HarinChat> {
                 ],
               ),
             ),
-            // 하단 네비게이션
-            Container(
-              height: 56,
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey),
-                ),
-                color: Colors.white,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _navItem(Icons.home, '홈'),
-                  _navItem(Icons.smart_toy, 'AI'),
-                  _navItem(Icons.search, '탐색'),
-                  _navItem(Icons.settings, '설정'),
-                  _navItem(Icons.person, '나'),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -341,5 +330,75 @@ class _HarinChatState extends State<HarinChat> {
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.deepPurple)),
       ],
     );
+  }
+}
+
+// 타자기 스타일 텍스트 출력 위젯
+class TypingText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final Duration duration;
+
+  const TypingText({
+    super.key,
+    required this.text,
+    this.style,
+    this.duration = const Duration(milliseconds: 30),
+  });
+
+  @override
+  _TypingTextState createState() => _TypingTextState();
+}
+
+class _TypingTextState extends State<TypingText> {
+  String _displayedText = '';
+  Timer? _timer;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTyping();
+  }
+
+  @override
+  void didUpdateWidget(covariant TypingText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      _resetTyping();
+    }
+  }
+
+  void _startTyping() {
+    _timer = Timer.periodic(widget.duration, (timer) {
+      if (_currentIndex < widget.text.length) {
+        setState(() {
+          _displayedText += widget.text[_currentIndex];
+          _currentIndex++;
+        });
+      } else {
+        _timer?.cancel();
+      }
+    });
+  }
+
+  void _resetTyping() {
+    _timer?.cancel();
+    setState(() {
+      _displayedText = '';
+      _currentIndex = 0;
+    });
+    _startTyping();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(_displayedText, style: widget.style);
   }
 }

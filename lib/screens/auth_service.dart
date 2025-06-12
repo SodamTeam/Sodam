@@ -8,7 +8,7 @@ class AuthService {
   /// 배포 시 --dart-define=BACKEND_URL=https://api.example.com 형태로 덮어쓸 수 있음.
   static const String _baseUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'http://192.168.46.163:8003',  // 실제 안드로이드 기기용 IP
+    defaultValue: 'http://localhost:8003',  // 실제 안드로이드 기기용 IP
   );
 
   static final FlutterSecureStorage _storage = FlutterSecureStorage();

@@ -4,14 +4,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
+import '../config.dart';
 
 class AuthService {
-  /// 실제 안드로이드 기기에서는 컴퓨터의 IP 주소를 사용
-  /// 배포 시 --dart-define=BACKEND_URL=https://api.example.com 형태로 덮어쓸 수 있음.
-  static const String _baseUrl = String.fromEnvironment(
-    'BACKEND_URL',
-    defaultValue: 'http://192.168.46.163:8003',
-  );
+  static String get _baseUrl => Config.baseUrl;
 
   static final FlutterSecureStorage _storage = FlutterSecureStorage();
 
@@ -27,6 +24,7 @@ class AuthService {
         body: {
           'username': id,
           'password': pw,
+          'grant_type': 'password',
         },
       );
 
@@ -48,22 +46,26 @@ class AuthService {
   /// ────────────────────────── 회원가입
   static Future<String?> signup(String id, String pw) async {
     try {
+      print('회원가입 요청: username=$id, password=$pw');  // 디버깅용 로그
       final response = await http.post(
         Uri.parse('$_baseUrl/api/auth/signup'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'username': id, // ← 변경: 백엔드 스키마와 동일하게 맞춤
-          'pw': pw,
+          'username': id,
+          'password': pw,
         }),
       );
+
+      print('회원가입 응답: ${response.statusCode} - ${response.body}');  // 디버깅용 로그
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         return null; // 성공
       }
-      final detail =
-          (jsonDecode(response.body) as Map<String, dynamic>)['detail'];
-      return '회원가입 실패: $detail';
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final detail = data['detail'] as String?;
+      return '회원가입 실패: ${detail ?? '알 수 없는 오류'}';
     } catch (e) {
+      print('회원가입 에러: $e');  // 디버깅용 로그
       return '네트워크 오류: $e';
     }
   }

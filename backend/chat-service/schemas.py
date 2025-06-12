@@ -1,7 +1,6 @@
 # backend/chat-service/schemas.py
 
 from pydantic import BaseModel
-from datetime import datetime
 from typing import Optional
 
 class ChatBase(BaseModel):
@@ -14,10 +13,12 @@ class ChatCreate(ChatBase):
 class Chat(ChatBase):
     id: int
     response: str
-    created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-class ChatResponse(Chat):
-    pass 
+class ChatResponse(BaseModel):
+    id: int
+    user_id: int
+    message: str
+    response: str 
