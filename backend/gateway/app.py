@@ -119,7 +119,10 @@ async def login(request: Request):
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         print(f"Login response: {response.status_code} - {response.text}")  # 디버깅용 로그
-        return response.json()
+        return JSONResponse(
+            status_code=response.status_code,
+            content=response.json()
+        )
     except Exception as e:
         print(f"Login error: {str(e)}")  # 디버깅용 로그
         raise HTTPException(status_code=500, detail=str(e))
