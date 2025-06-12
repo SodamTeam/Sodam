@@ -47,36 +47,24 @@ class _SeraChatState extends State<SeraChat> {
   @override
   void initState() {
     super.initState();
-    _loadProfile(); // 프로필 로드 함수 호출
+    _loadProfile();
     _loadHistory();
   }
 
   Future<void> _loadHistory() async {
     try {
-      final hist = await chatService.fetchHistory(
-        userId,
-        'sera',
-      ); // ◆ 수정: 'sera' 채팅방으로 로드
-      final List<Map<String, String>> loaded =
-          hist
-              .map(
-                (e) => {
-                  'sender': e['sender'] as String,
-                  'text': e['content'] as String,
-                },
-              )
-              .toList();
+      final hist = await chatService.fetchHistory(userId, 'sera');
+      final loaded = hist.map((e) => {
+        'sender': e['sender'] as String,
+        'text': e['content'] as String,
+      }).toList();
 
-      setState(() {
-        messages = [
-          {
-            'sender': 'sera',
-            'text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?',
-          },
-          ...loaded,
-        ];
-      });
-      _scrollToBottom();
+      if (loaded.isNotEmpty) {
+        setState(() {
+          messages.addAll(loaded);
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
       print('히스토리 로드 에러: $e');
     }
@@ -89,105 +77,81 @@ class _SeraChatState extends State<SeraChat> {
     });
   }
 
-  Future<String> _generateResponse(
-    String input, {
-    String? systemPrompt,
-    String mode = 'chat',
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        Uri.parse(_baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'model': 'gemma3:4b',
-          'prompt': input,
-          'mode': mode,
-          'stream': false,
-          'system': systemPrompt,
-          'character': 'sera',
-          'name': '세라',
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['response'] as String;
-      } else {
-        throw Exception('Failed to generate response');
-      }
-    } catch (e) {
-      return '죄송합니다. 오류가 발생했습니다.';
-    }
-  }
-
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
-
-    await chatService.saveHistory(userId, 'sera', 'user', input);
-
     setState(() {
       messages.add({'sender': 'user', 'text': input});
       _controller.clear();
       _isLoading = true;
     });
 
-    _scrollToBottom();
-
     await chatService.saveHistory(userId, 'sera', 'user', input);
 
-    try {
-      final String apiUrl = _baseUrl;
+    // 이전 대화 내용을 포함한 프롬프트 생성
+    String conversationHistory = '';
+    for (var i = 0; i < messages.length - 1; i++) {
+      final message = messages[i];
+      if (message['sender'] == 'user') {
+        conversationHistory += '사용자: ${message['text']}\n';
+      } else {
+        conversationHistory += '세라: ${message['text']}\n';
+      }
+    }
+    conversationHistory += '사용자: $input';
 
-      // 이전 대화 내용을 포함한 프롬프트 생성
-      String conversationHistory = '';
-      for (var i = 0; i < messages.length - 1; i++) {
-        final message = messages[i];
-        if (message['sender'] == 'user') {
-          conversationHistory += '사용자: ${message['text']}\n';
-        } else {
-          conversationHistory += '세라: ${message['text']}\n';
+    // 모드에 따라 prefix 추가
+    String promptWithPrefix = conversationHistory;
+    if (mode == 'coding-helper') {
+      promptWithPrefix = '코딩을 도와줘!\n$conversationHistory';
+    } else if (mode == 'tech-explainer') {
+      promptWithPrefix = '기술을 설명해줘!\n$conversationHistory';
+    } else if (mode == 'debug-assistant') {
+      promptWithPrefix = '디버깅을 도와줘!\n$conversationHistory';
+    } else if (mode == 'learning-path') {
+      promptWithPrefix = '학습 로드맵을 만들어줘!\n$conversationHistory';
+    }
+
+    try {
+      final request = http.Request('POST', Uri.parse(_baseUrl));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': promptWithPrefix,
+        'mode': mode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'sera',
+        'name': '세라',
+      });
+
+      final response = await request.send();
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      String fullResponse = '';
+      await for (final line in stream) {
+        if (line.startsWith('data: ')) {
+          final data = jsonDecode(line.substring(6));
+          final chunk = data['response'] as String;
+
+          setState(() {
+            if (messages.isNotEmpty && messages.last['sender'] == 'sera') {
+              messages.last['text'] = fullResponse + chunk;
+            } else {
+              messages.add({'sender': 'sera', 'text': chunk});
+            }
+            fullResponse += chunk;
+          });
+          _scrollToBottom();
         }
       }
-      conversationHistory += '사용자: $input';
-
-      // 모드에 따라 prefix 추가
-      String promptWithPrefix = conversationHistory;
-      if (mode == 'coding-helper') {
-        promptWithPrefix = '코딩을 도와줘!\n$conversationHistory';
-      } else if (mode == 'tech-explainer') {
-        promptWithPrefix = '기술을 설명해줘!\n$conversationHistory';
-      } else if (mode == 'debug-assistant') {
-        promptWithPrefix = '디버깅을 도와줘!\n$conversationHistory';
-      } else if (mode == 'learning-path') {
-        promptWithPrefix = '학습 로드맵을 만들어줘!\n$conversationHistory';
-      }
-      final resp = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'model': 'gemma3:4b',
-          'prompt': promptWithPrefix,
-          'mode': mode,
-          'stream': false, // 스트림 비활성화
-          'system': systemPrompt,
-          'character': 'sera',
-          'name': '세라',
-        }),
-      );
-      if (resp.statusCode != 200) {
-        throw Exception('서버 오류 ${resp.statusCode}');
-      }
-
-      final data = jsonDecode(resp.body);
-      final String reply = data['response'] as String; // 전체 응답 키로 파싱
-
       setState(() {
-        messages.add({'sender': 'sera', 'text': reply});
+        _isLoading = false;
       });
-      await chatService.saveHistory(userId, 'sera', 'sera', reply);
-      _scrollToBottom();
+      // 스트리밍이 완료된 후 응답 저장
+      await chatService.saveHistory(userId, 'sera', 'sera', fullResponse);
     } catch (e) {
       print('Error in _sendMessage: $e');
       setState(() {
@@ -245,18 +209,55 @@ class _SeraChatState extends State<SeraChat> {
         _isLoading = true;
       });
 
-      final reply = await _generateResponse(
-        initialPrompt,
-        systemPrompt: systemPrompt,
-        mode: newMode,
-      );
+      try {
+        final request = http.Request('POST', Uri.parse(_baseUrl));
+        request.headers['Content-Type'] = 'application/json';
+        request.body = jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': initialPrompt,
+          'mode': newMode,
+          'stream': true,
+          'system': systemPrompt,
+          'character': 'sera',
+          'name': '세라',
+        });
 
-      setState(() {
-        messages.add({'sender': 'sera', 'text': reply});
-        _isLoading = false;
-      });
-      await chatService.saveHistory(userId, 'sera', 'sera', reply);
-      _scrollToBottom();
+        final response = await request.send();
+        final stream = response.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter());
+
+        String fullResponse = '';
+        await for (final line in stream) {
+          if (line.startsWith('data: ')) {
+            final data = jsonDecode(line.substring(6));
+            final chunk = data['response'] as String;
+
+            setState(() {
+              if (messages.isNotEmpty && messages.last['sender'] == 'sera') {
+                messages.last['text'] = fullResponse + chunk;
+              } else {
+                messages.add({'sender': 'sera', 'text': chunk});
+              }
+              fullResponse += chunk;
+            });
+            _scrollToBottom();
+          }
+        }
+        await chatService.saveHistory(userId, 'sera', 'sera', fullResponse);
+      } catch (e) {
+        print('Error in _changeMode: $e');
+        setState(() {
+          messages.add({
+            'sender': 'sera',
+            'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+          });
+        });
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

@@ -144,8 +144,26 @@ class _HarinChatState extends State<HarinChat> {
       promptWithPrefix = '소설 작성을 도와줘!\n$conversationHistory';
     } else if (mode == 'literary-analysis') {
       promptWithPrefix = '문학 작품을 분석해줘!\n$conversationHistory';
-    } else if (mode == 'poetry-play') {
+    } else if (mode == 'poem-play') {
       promptWithPrefix = '시를 함께 써보자!\n$conversationHistory';
+    }
+
+    // 독서 추천 모드일 경우
+    if (mode == 'book-recommendation') {
+      final reply = await _generateResponse(
+        promptWithPrefix,
+        systemPrompt: systemPrompt,
+        mode: 'book',
+      );
+
+      setState(() {
+        messages.add({'sender': 'harin', 'text': reply});
+        _isLoading = false;
+      });
+      _scrollToBottom();
+
+      await chatService.saveHistory(userId, 'harin', 'harin', reply);
+      return;
     }
 
     // 일반 채팅이 아닌 경우 스트리밍 사용

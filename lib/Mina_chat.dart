@@ -4,6 +4,11 @@ import 'profile_service.dart';
 import 'EmotionDiary.dart';
 import 'MeditationContent.dart';
 import 'Encouragement.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'config.dart';
+import 'dart:async';
+import 'dart:io';
 
 class MinaChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -16,8 +21,12 @@ class MinaChat extends StatefulWidget {
 class _MinaChatState extends State<MinaChat> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _isLoading = false;
   final ChatService chatService = ChatService();
+  final int userId = 3;  // 미나의 사용자 ID
   String systemPrompt = '';
+  String mode = 'chat';  // 기본 모드를 'chat'으로 설정
+  final String _baseUrl = '${Config.baseUrl}/api/chat/generate';
 
   List<Map<String, String>> messages = [
     {
@@ -26,12 +35,11 @@ class _MinaChatState extends State<MinaChat> {
     },
   ];
 
-  bool _isLoading = false;
-
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadHistory();
   }
 
   Future<void> _loadProfile() async {
@@ -41,29 +49,154 @@ class _MinaChatState extends State<MinaChat> {
     });
   }
 
-  void _sendMessage(String input) async {
-    if (input.trim().isEmpty || _isLoading) return;
+  Future<void> _loadHistory() async {
+    try {
+      final hist = await chatService.fetchHistory(userId, 'mina');
+      final loaded = hist.map((e) => {
+        'sender': e['sender'] as String,
+        'text': e['content'] as String,
+      }).toList();
 
+      if (loaded.isNotEmpty) {
+        setState(() {
+          messages.addAll(loaded);
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      print('히스토리 로드 에러: $e');
+    }
+  }
+
+  Future<String> _generateResponse(
+    String input, {
+    String? systemPrompt,
+    String mode = 'chat',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': input,
+          'mode': mode,
+          'stream': false,
+          'system': systemPrompt,
+          'character': 'mina',
+          'name': '미나',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['response'];
+      } else {
+        throw Exception('Failed to generate response');
+      }
+    } catch (e) {
+      return '죄송합니다. 오류가 발생했습니다.';
+    }
+  }
+
+  void _sendMessage() async {
+    final input = _controller.text.trim();
+    if (input.isEmpty || _isLoading) return;
     setState(() {
       messages.add({'sender': 'user', 'text': input});
+      _controller.clear();
       _isLoading = true;
     });
-    _controller.clear();
-    _scrollToBottom();
 
-    final reply = await chatService.generate(input, systemPrompt: systemPrompt);
+    await chatService.saveHistory(userId, 'mina', 'user', input);
 
-    setState(() {
-      messages.add({'sender': 'mina', 'text': reply});
-      _isLoading = false;
-    });
-    _scrollToBottom();
+    // 이전 대화 내용을 포함한 프롬프트 생성
+    String conversationHistory = '';
+    for (var i = 0; i < messages.length - 1; i++) {
+      final message = messages[i];
+      if (message['sender'] == 'user') {
+        conversationHistory += '사용자: ${message['text']}\n';
+      } else {
+        conversationHistory += '미나: ${message['text']}\n';
+      }
+    }
+    conversationHistory += '사용자: $input';
+
+    // 모드에 따라 prefix 추가
+    String promptWithPrefix = conversationHistory;
+    if (mode == 'novel-writing') {
+      promptWithPrefix = '소설 작성을 도와줘!\n$conversationHistory';
+    } else if (mode == 'storytelling') {
+      promptWithPrefix = '이야기를 들려줘!\n$conversationHistory';
+    } else if (mode == 'creative-writing') {
+      promptWithPrefix = '창작을 도와줘!\n$conversationHistory';
+    } else if (mode == 'plot-development') {
+      promptWithPrefix = '플롯을 발전시켜줘!\n$conversationHistory';
+    }
+
+    try {
+      final request = http.Request('POST', Uri.parse(_baseUrl));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': promptWithPrefix,
+        'mode': mode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'mina',
+        'name': '미나',
+      });
+
+      final response = await request.send();
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      String fullResponse = '';
+      await for (final line in stream) {
+        if (line.startsWith('data: ')) {
+          final data = jsonDecode(line.substring(6));
+          final chunk = data['response'] as String;
+
+          setState(() {
+            if (messages.isNotEmpty && messages.last['sender'] == 'mina') {
+              messages.last['text'] = fullResponse + chunk;
+            } else {
+              messages.add({'sender': 'mina', 'text': chunk});
+            }
+            fullResponse += chunk;
+          });
+          _scrollToBottom();
+        }
+      }
+      setState(() {
+        _isLoading = false;
+      });
+      // 스트리밍이 완료된 후 응답 저장
+      await chatService.saveHistory(userId, 'mina', 'mina', fullResponse);
+    } catch (e) {
+      print('Error in _sendMessage: $e');
+      setState(() {
+        messages.add({
+          'sender': 'mina',
+          'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+        });
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -193,7 +326,7 @@ class _MinaChatState extends State<MinaChat> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      onSubmitted: _sendMessage,
+                      onSubmitted: (value) => _sendMessage(),
                       decoration: const InputDecoration(
                         hintText: '감정을 자유롭게 적어보세요...',
                         border: OutlineInputBorder(
@@ -205,7 +338,7 @@ class _MinaChatState extends State<MinaChat> {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _sendMessage(_controller.text),
+                    onPressed: _isLoading ? null : () => _sendMessage(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.pink,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

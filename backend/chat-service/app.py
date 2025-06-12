@@ -85,31 +85,42 @@ async def generate(req: GenerateRequest):
             if not req.prompt:
                 raise HTTPException(status_code=400, detail="책 키워드를 입력해주세요.")
 
-            async with httpx.AsyncClient() as client:
-                params = {
-                    "q": req.prompt,
-                    "maxResults": 3,
-                    "printType": "books",
-                    "langRestrict": "ko"
-                }
-                resp = await client.get(GOOGLE_BOOKS_API, params=params)
-                if resp.status_code != 200:
-                    raise HTTPException(status_code=resp.status_code, detail="Google Books API 오류")
+            try:
+                async with httpx.AsyncClient() as client:
+                    # 검색어를 더 구체적으로 만듭니다
+                    search_query = f"intitle:{req.prompt} OR inauthor:{req.prompt} OR subject:{req.prompt}"
+                    params = {
+                        "q": search_query,
+                        "maxResults": 3,
+                        "printType": "books",
+                        "orderBy": "relevance"
+                    }
+                    print(f"Google Books API 호출: {GOOGLE_BOOKS_API}?{params}")  # 디버깅용 로그
+                    resp = await client.get(GOOGLE_BOOKS_API, params=params)
+                    print(f"Google Books API 응답 상태 코드: {resp.status_code}")  # 디버깅용 로그
 
-                data = resp.json()
-                books = data.get("items", [])
-                if not books:
-                    return GenerateResponse(response="추천할 책이 없습니다.")
+                    if resp.status_code != 200:
+                        print(f"Google Books API 오류: {resp.text}")  # 디버깅용 로그
+                        raise HTTPException(status_code=resp.status_code, detail=f"Google Books API 오류: {resp.text}")
 
-                results = []
-                for book in books:
-                    info = book["volumeInfo"]
-                    title = info.get("title", "제목 없음")
-                    authors = ", ".join(info.get("authors", []))
-                    desc = info.get("description", "설명이 없습니다.")
-                    results.append(f"\U0001F4DA 제목: {title}\n\U0001F464 저자: {authors}\n\U0001F4DD 소개: {desc[:100]}...\n")
+                    data = resp.json()
+                    books = data.get("items", [])
+                    print(f"검색된 책 수: {len(books)}")  # 디버깅용 로그
+                    if not books:
+                        return GenerateResponse(response="추천할 책이 없습니다.")
 
-                return GenerateResponse(response="\n\n".join(results))
+                    results = []
+                    for book in books:
+                        info = book["volumeInfo"]
+                        title = info.get("title", "제목 없음")
+                        authors = ", ".join(info.get("authors", []))
+                        desc = info.get("description", "설명이 없습니다.")
+                        results.append(f"\U0001F4DA 제목: {title}\n\U0001F464 저자: {authors}\n\U0001F4DD 소개: {desc[:100]}...\n")
+
+                    return GenerateResponse(response="\n\n".join(results))
+            except Exception as e:
+                print(f"Google Books API 호출 중 예외 발생: {str(e)}")  # 디버깅용 로그
+                raise HTTPException(status_code=500, detail=f"Google Books API 호출 실패: {str(e)}")
 
         # Ollama API 호출을 위한 메시지 구성
         messages = []

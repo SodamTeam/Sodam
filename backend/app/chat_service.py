@@ -29,17 +29,31 @@ class GenerateResponse(BaseModel):
 
 async def fetch_google_books(prompt: str) -> list:
     """Google Books API를 호출하여 책 정보를 가져옵니다."""
-    async with httpx.AsyncClient() as client:
-        params = {
-            "q": prompt,
-            "maxResults": MAX_BOOK_RESULTS,
-            "printType": "books",
-            "langRestrict": "ko"
-        }
-        resp = await client.get(GOOGLE_BOOKS_API, params=params)
-        if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail="Google Books API 오류")
-        return resp.json().get("items", [])
+    try:
+        async with httpx.AsyncClient() as client:
+            # 검색어를 더 구체적으로 만듭니다
+            search_query = f"intitle:{prompt} OR inauthor:{prompt} OR subject:{prompt}"
+            params = {
+                "q": search_query,
+                "maxResults": MAX_BOOK_RESULTS,
+                "printType": "books",
+                "orderBy": "relevance"
+            }
+            print(f"Google Books API 호출: {GOOGLE_BOOKS_API}?{params}")  # 디버깅용 로그
+            resp = await client.get(GOOGLE_BOOKS_API, params=params)
+            print(f"Google Books API 응답 상태 코드: {resp.status_code}")  # 디버깅용 로그
+            
+            if resp.status_code != 200:
+                print(f"Google Books API 오류: {resp.text}")  # 디버깅용 로그
+                raise HTTPException(status_code=resp.status_code, detail=f"Google Books API 오류: {resp.text}")
+            
+            data = resp.json()
+            items = data.get("items", [])
+            print(f"검색된 책 수: {len(items)}")  # 디버깅용 로그
+            return items
+    except Exception as e:
+        print(f"Google Books API 호출 중 예외 발생: {str(e)}")  # 디버깅용 로그
+        raise HTTPException(status_code=500, detail=f"Google Books API 호출 실패: {str(e)}")
 
 def format_book_info(book: dict) -> str:
     """책 정보를 포맷팅합니다."""
