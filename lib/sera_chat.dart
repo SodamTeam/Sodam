@@ -1,19 +1,16 @@
-// Sodam/lib/sera_chart.dart
-
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-import 'chat_service.dart';
-import 'profile_service.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'profile_service.dart';
+import 'package:flutter/foundation.dart';
 import 'config.dart';
+import 'chat_service.dart';
 import 'chat_service.dart';
 
 class SeraChat extends StatefulWidget {
   final VoidCallback goBack;
-  const SeraChat({super.key, required this.goBack});
+  const SeraChat({super.key, required this.goBack, Map<String, dynamic>? preferences});
 
   @override
   State<SeraChat> createState() => _SeraChatState();
@@ -22,31 +19,32 @@ class SeraChat extends StatefulWidget {
 class _SeraChatState extends State<SeraChat> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final FocusNode _textFieldFocus = FocusNode();
-  final ChatService chatService = ChatService(); // ◆ 수정: chatService 인스턴스 추가
-  final int userId = 3; // ◆ 수정: userId 정의
+  final int userId = 1;
+  final ChatService chatService = ChatService();
 
   List<Map<String, String>> messages = [
-    {'sender': 'sera', 'text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?'},
+    {'sender': 'sera', 'text': '안녕하세요, 저는 기술 챗봇 세라에요 🤖\n무엇을 도와드릴까요?'},
   ];
 
   String mode = 'default';
   bool _isLoading = false;
-  String systemPrompt = ''; // 초기값을 빈 문자열로 설정
+  String systemPrompt = '';
 
   final Map<String, String> modeLabels = {
-    'coding-helper': '코딩 도우미',
+    'code-helper': '코딩 도우미',
     'tech-explainer': '기술 설명',
-    'debug-assistant': '디버깅 도우미',
-    'learning-path': '학습 로드맵',
+    'debugging': '디버깅 도우미',
+    'learning-roadmap': '학습 로드맵 추천',
     'default': '기본',
   };
 
+  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
   String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
 
   @override
   void initState() {
     super.initState();
+    _loadProfile();
     _loadProfile();
     _loadHistory();
   }
@@ -153,17 +151,11 @@ class _SeraChatState extends State<SeraChat> {
       // 스트리밍이 완료된 후 응답 저장
       await chatService.saveHistory(userId, 'sera', 'sera', fullResponse);
     } catch (e) {
-      print('Error in _sendMessage: $e');
       setState(() {
-        messages.add({
-          'sender': 'sera',
-          'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
-        });
+        messages.add({'sender': 'sera', 'text': '죄송합니다. 오류가 발생했습니다.'});
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -272,7 +264,7 @@ class _SeraChatState extends State<SeraChat> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfff4f8fa),
+      backgroundColor: const Color(0xfff0f4f8),
       body: SafeArea(
         child: Column(
           children: [
@@ -280,6 +272,7 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey)),
                 border: Border(bottom: BorderSide(color: Colors.grey)),
               ),
               child: Row(
@@ -295,15 +288,10 @@ class _SeraChatState extends State<SeraChat> {
                   ),
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.notifications),
-                      ),
+                      IconButton(onPressed: () {}, icon: const Icon(Icons.notifications)),
                       const CircleAvatar(
                         radius: 16,
-                        backgroundImage: NetworkImage(
-                          'https://randomuser.me/api/portraits/women/44.jpg',
-                        ),
+                        backgroundImage: NetworkImage('https://randomuser.me/api/portraits/women/65.jpg'),
                       ),
                     ],
                   ),
@@ -314,19 +302,12 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 14,
-                    backgroundImage: AssetImage('assets/sera_chat.jpg'),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
+                children: const [
+                  CircleAvatar(radius: 14, backgroundImage: AssetImage('assets/sera_chat.jpg')),
+                  SizedBox(width: 8),
+                  Text(
                     '세라',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -359,7 +340,7 @@ class _SeraChatState extends State<SeraChat> {
                       child: Text(
                         msg['text'] ?? '',
                         style: TextStyle(
-                          color: isSera ? Colors.black87 : Colors.blue[900],
+                          color: isSera ? Colors.black87 : Colors.indigo,
                           fontSize: 15,
                         ),
                       ),
@@ -376,25 +357,19 @@ class _SeraChatState extends State<SeraChat> {
                 runSpacing: 8,
                 children: [
                   ElevatedButton(
-                    onPressed:
-                        _isLoading ? null : () => _changeMode('coding-helper'),
-                    child: const Text('💻 코딩 도우미'),
+                    onPressed: _isLoading ? null : () => _changeMode('code-helper'),
+                    child: const Text('👩‍💻 코딩 도우미'),
                   ),
                   ElevatedButton(
-                    onPressed:
-                        _isLoading ? null : () => _changeMode('tech-explainer'),
-                    child: const Text('🔧 기술 설명'),
+                    onPressed: _isLoading ? null : () => _changeMode('tech-explainer'),
+                    child: const Text('📘 기술 설명'),
                   ),
                   ElevatedButton(
-                    onPressed:
-                        _isLoading
-                            ? null
-                            : () => _changeMode('debug-assistant'),
-                    child: const Text('🐛 디버깅 도우미'),
+                    onPressed: _isLoading ? null : () => _changeMode('debugging'),
+                    child: const Text('🛠️ 디버깅'),
                   ),
                   ElevatedButton(
-                    onPressed:
-                        _isLoading ? null : () => _changeMode('learning-path'),
+                    onPressed: _isLoading ? null : () => _changeMode('learning-roadmap'),
                     child: const Text('📚 학습 로드맵'),
                   ),
                 ],
@@ -404,6 +379,7 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey)),
                 border: Border(top: BorderSide(color: Colors.grey)),
               ),
               child: Row(
@@ -415,13 +391,8 @@ class _SeraChatState extends State<SeraChat> {
                       enabled: !_isLoading,
                       decoration: const InputDecoration(
                         hintText: '메시지를 입력하세요...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(20)),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
                     ),
                   ),
@@ -431,50 +402,17 @@ class _SeraChatState extends State<SeraChat> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                     child: const Text('전송'),
                   ),
                 ],
               ),
             ),
-            // 하단 네비게이션
-            Container(
-              height: 56,
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey)),
-                color: Colors.white,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _navItem(Icons.home, '홈'),
-                  _navItem(Icons.smart_toy, 'AI'),
-                  _navItem(Icons.search, '탐색'),
-                  _navItem(Icons.settings, '설정'),
-                  _navItem(Icons.person, '나'),
-                ],
-              ),
-            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 24, color: Colors.blue),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.blue)),
-      ],
     );
   }
 }

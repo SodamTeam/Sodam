@@ -1,5 +1,4 @@
 // Sodam/lib/mainScreen.dart
-
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'sera_chat.dart';
@@ -18,8 +17,7 @@ enum PageState { intro, select, chat }
 
 class _HomePageState extends State<HomePage> {
   PageState _page = PageState.intro;
-  int selectedId = 1;
-  bool isSelected = false;
+  int? selectedId = 1;
 
   Future<void> _logout() async {
     await AuthService.logout();
@@ -220,7 +218,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   itemBuilder: (context, index, realIndex) {
                     final slide = slides[index];
-                    isSelected = selectedId == slide["id"];
+                    final bool isSelected = slide["id"] == selectedId;
                     return Stack(
                       children: [
                         Container(
@@ -267,17 +265,12 @@ class _HomePageState extends State<HomePage> {
                                           color: Colors.white,
                                         ),
                                         onPressed:
-                                            () => setState(() {
-                                              selectedId = 0;
-                                              isSelected = false;
-                                            }),
+                                            () => setState(() => selectedId = null),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 10),
-                                  ...List.generate(slide["features"].length, (
-                                    i,
-                                  ) {
+                                  ...List.generate(slide["features"].length, (i) {
                                     return Text(
                                       "• ${slide["features"][i]}",
                                       style: const TextStyle(
@@ -287,19 +280,61 @@ class _HomePageState extends State<HomePage> {
                                     );
                                   }),
                                   const SizedBox(height: 10),
-                                  ElevatedButton(
-                                    onPressed: () {
+                                  if (slide["id"] == 1)
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _page = PageState.chat;
+                                          selectedId = 1;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black,
+                                      ),
+                                      child: const Text("하린과 채팅 시작하기"),
+                                    ),
+                                  if (slide["id"] == 2)
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _page = PageState.chat;
+                                          selectedId = 2;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black,
+                                      ),
+                                      child: const Text("세라와 채팅 시작하기"),
+                                      ),
+                                  if (slide["id"] == 3)
+                                    ElevatedButton(
+                                      onPressed: () {
                                       setState(() {
                                         _page = PageState.chat;
-                                        selectedId = slide["id"];
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: Colors.black,
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black,
+                                      ),
+                                      child: const Text("미나와 채팅 시작하기"),
                                     ),
-                                    child: Text("${slide["name"]}와 채팅 시작하기"),
-                                  ),
+                                  if (slide["id"] == 4)
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _page = PageState.chat;
+                                          selectedId = 4;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black,
+                                      ),
+                                      child: const Text("유리와 채팅 시작하기"),
+                                    ),
                                 ],
                               ),
                             ),
@@ -310,9 +345,10 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
+              ],
+            ),
           ),
         );
-
       case PageState.chat:
         switch (selectedId) {
           case 1:

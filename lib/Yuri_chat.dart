@@ -12,7 +12,7 @@ import 'config.dart';
 
 class YuriChat extends StatefulWidget {
   final VoidCallback goBack;
-  const YuriChat({super.key, required this.goBack});
+  const YuriChat({super.key, required this.goBack, Map<String, dynamic>? preferences});
 
   @override
   State<YuriChat> createState() => _YuriChatState();

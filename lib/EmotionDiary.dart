@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
 class DiaryEntry {
   final String id;
@@ -44,7 +44,6 @@ class DiaryEntry {
 
 class EmotionDiary extends StatefulWidget {
   final VoidCallback onGoBack;
-
   const EmotionDiary({Key? key, required this.onGoBack}) : super(key: key);
 
   @override
@@ -52,39 +51,42 @@ class EmotionDiary extends StatefulWidget {
 }
 
 class _EmotionDiaryState extends State<EmotionDiary> {
-  final _dateController = TextEditingController();
-  final _moodController = TextEditingController();
-  final _categoryController = TextEditingController();
   final _contentController = TextEditingController();
-
   final ImagePicker _picker = ImagePicker();
   XFile? _pickedImage;
+
+  String? _editingId;
+
+  final String baseUrl = 'http://localhost:8005/api/diary';
+  
 
   List<DiaryEntry> entries = [];
   List<DiaryEntry> filtered = [];
 
-  final String baseUrl = 'http://192.168.0.16:8000/api/diary';
-  final String imageUploadUrl = 'http://192.168.0.16:8000/api/diary/upload-image/';
-
-  String selectedMonth = '';
-  String selectedMood = '';
-  String selectedCategory = '';
+  final List<String> moods = ['행복', '우울', '즐거움'];
+  final List<String> categories = ['일상', '가족', '기념'];
+  String? selectedMood;
+  String? selectedCategory;
+  
   String selectedFont = 'Roboto';
   double fontSize = 14;
   bool isUnderline = false;
   bool isBold = false;
+  String selectedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
   @override
   void initState() {
     super.initState();
-    _loadEntries();
+    initializeDateFormatting('ko_KR', null).then((_) {
+      _loadEntries();
+    });
   }
 
   Future<void> _loadEntries() async {
     try {
       final res = await http.get(Uri.parse(baseUrl));
       if (res.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(res.body);
+        final data = jsonDecode(res.body) as List;
         final parsed = data.map((e) => DiaryEntry.fromJson(e)).toList();
         setState(() {
           entries = parsed;
@@ -96,82 +98,91 @@ class _EmotionDiaryState extends State<EmotionDiary> {
     }
   }
 
-  Future<String?> _uploadImage(XFile image) async {
-    final request = http.MultipartRequest('POST', Uri.parse(imageUploadUrl));
-    request.files.add(await http.MultipartFile.fromPath('file', image.path));
-    final response = await request.send();
-    if (response.statusCode == 200) {
-      final resString = await response.stream.bytesToString();
-      final jsonRes = jsonDecode(resString);
-      return jsonRes['image_url'];
-    } else {
-      return null;
-    }
-  }
-
-  Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _pickedImage = picked;
-      });
-    }
-  }
 
   Future<void> _saveEntry() async {
-    String? uploadedImageUrl;
-    if (_pickedImage != null) {
-      uploadedImageUrl = await _uploadImage(_pickedImage!);
-    }
-
+    final bool isEditing = _editingId != null;
+  
     final newEntry = DiaryEntry(
-      id: '0',
-      date: _dateController.text,
-      mood: _moodController.text,
-      category: _categoryController.text,
+      id: _editingId ?? '0',
+      date: selectedDate,
+      mood: selectedMood ?? '',
+      category: selectedCategory ?? '',
       content: _contentController.text,
-      imageUrl: uploadedImageUrl,
     );
 
     try {
-      final res = await http.post(
-        Uri.parse(baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(newEntry.toJson()),
-      );
+      final res = await (isEditing
+          ? http.put(
+              Uri.parse('$baseUrl/${_editingId}'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(newEntry.toJson()),
+            )
+          : http.post(
+              Uri.parse(baseUrl),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(newEntry.toJson()),
+            ));
 
       if (res.statusCode == 200) {
-        final saved = DiaryEntry.fromJson(jsonDecode(res.body));
-        setState(() {
-          entries.insert(0, saved);
-          filtered = List.from(entries);
-          _pickedImage = null;
-        });
-        _moodController.clear();
-        _categoryController.clear();
+        if (isEditing) {
+          final updated = DiaryEntry.fromJson(jsonDecode(res.body));
+          setState(() {
+            final index = entries.indexWhere((e) => e.id == updated.id);
+            if (index != -1) entries[index] = updated;
+            filtered = List.from(entries);
+            _editingId = null;
+          });
+        } else {
+          final saved = DiaryEntry.fromJson(jsonDecode(res.body));
+          setState(() {
+            entries.insert(0, saved);
+            filtered = List.from(entries);
+          });
+        }
+
         _contentController.clear();
+
+        await _loadEntries();
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(isEditing ? '일기가 수정되었습니다!' : '일기가 저장되었습니다!'),
+          ));
+        }
       }
     } catch (e) {
-      print('저장 오류: $e');
+      print(isEditing ? '수정 오류: $e' : '저장 오류: $e');
     }
   }
 
-  void _filterBy(String key, String value) {
-    setState(() {
-      filtered = entries.where((e) {
-        if (key == 'month') return e.date.startsWith(value);
-        if (key == 'mood') return e.mood == value;
-        return e.category == value;
-      }).toList();
-    });
-  }
-
-  Widget _outlinedImagePreview() {
-    if (_pickedImage == null) return Container();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Image.file(File(_pickedImage!.path), height: 150),
+  Future<void> _deleteEntry(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('삭제 확인'),
+        content: const Text('정말 삭제하시겠습니까?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('삭제')),
+        ],
+      ),
     );
+
+    if (confirmed == true) {
+      try {
+        final res = await http.delete(Uri.parse('$baseUrl/$id'));
+        if (res.statusCode == 200) {
+          await _loadEntries();
+          if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('일기가 삭제되었습니다!')),
+            );
+          }
+        }
+      } catch (e) {
+        print('삭제 오류: $e');
+      }
+    }
   }
 
   @override
@@ -182,107 +193,363 @@ class _EmotionDiaryState extends State<EmotionDiary> {
         backgroundColor: Colors.white,
         elevation: 1,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.pink),
+          icon: const Icon(Icons.arrow_back, color: Colors.pink),
           onPressed: widget.onGoBack,
         ),
         title: Text('📔 감정일기 작성', style: TextStyle(color: Colors.pink[600])),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(12),
         child: ListView(
           children: [
-            TextField(
-              controller: _dateController,
-              decoration: InputDecoration(labelText: '날짜', border: OutlineInputBorder()),
+            ListTile(
+              title: Text('날짜: ${DateFormat('yyyy년 MM월 dd일', 'ko_KR').format(DateTime.parse(selectedDate))}'),
+              trailing: const Icon(Icons.calendar_month),
               onTap: () async {
                 final picked = await showDatePicker(
                   context: context,
                   initialDate: DateTime.now(),
                   firstDate: DateTime(2024),
                   lastDate: DateTime(2030),
+                  locale: const Locale('ko', 'KR'),
                 );
                 if (picked != null) {
-                  _dateController.text = picked.toIso8601String().split('T')[0];
+                  setState(() => selectedDate = picked.toIso8601String().split('T')[0]);
                 }
               },
-              readOnly: true,
             ),
-            SizedBox(height: 10),
-            TextField(
-              controller: _moodController,
-              decoration: InputDecoration(labelText: '오늘의 감정', border: OutlineInputBorder()),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: '오늘의 감정'),
+              value: selectedMood,
+              items: moods.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+              onChanged: (val) => setState(() => selectedMood = val),
             ),
-            SizedBox(height: 10),
-            TextField(
-              controller: _categoryController,
-              decoration: InputDecoration(labelText: '카테고리', border: OutlineInputBorder()),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: '카테고리'),
+              value: selectedCategory,
+              items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+              onChanged: (val) => setState(() => selectedCategory = val),
             ),
-            SizedBox(height: 10),
             Row(
               children: [
                 DropdownButton<String>(
                   value: selectedFont,
-                  items: ['Roboto', 'Arial', 'Nanum Gothic'].map((font) {
-                    return DropdownMenuItem(value: font, child: Text(font));
-                  }).toList(),
-                  onChanged: (value) => setState(() => selectedFont = value!),
+                  items: ['Roboto', 'NanumGothic'].map((font) => DropdownMenuItem(value: font, child: Text(font))).toList(),
+                  onChanged: (val) => setState(() => selectedFont = val!),
                 ),
-                SizedBox(width: 10),
                 IconButton(
-                  icon: Icon(Icons.format_bold),
+                  icon: const Icon(Icons.format_bold),
                   onPressed: () => setState(() => isBold = !isBold),
                   color: isBold ? Colors.pink : Colors.grey,
                 ),
                 IconButton(
-                  icon: Icon(Icons.format_underline),
+                  icon: const Icon(Icons.format_underline),
                   onPressed: () => setState(() => isUnderline = !isUnderline),
                   color: isUnderline ? Colors.pink : Colors.grey,
                 ),
               ],
             ),
-            TextField(
-              controller: _contentController,
-              maxLines: 4,
-              style: TextStyle(
-                fontFamily: selectedFont,
-                fontSize: fontSize,
-                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                decoration: isUnderline ? TextDecoration.underline : null,
+            GestureDetector(
+              onTap: () async {
+                final edited = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EditContentPage(initialText: _contentController.text),
+                  ),
+                );
+                if (edited != null && edited is String) {
+                  setState(() {
+                    _contentController.text = edited;
+                  });
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(4),
+                  color: Colors.white,
+                ),
+                constraints: const BoxConstraints(minHeight: 80),
+                child: Text(
+                  _contentController.text.isEmpty ? '내용을 입력하세요...' : _contentController.text,
+                  style: TextStyle(
+                    fontFamily: selectedFont,
+                    fontSize: fontSize,
+                    fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                    decoration: isUnderline ? TextDecoration.underline : null,
+                    color: _contentController.text.isEmpty ? Colors.grey : Colors.black,
+                  ),
+                ),
               ),
-              decoration: InputDecoration(labelText: '내용', border: OutlineInputBorder()),
             ),
-            SizedBox(height: 10),
-            _outlinedImagePreview(),
-            ElevatedButton(
-              onPressed: _pickImage,
-              child: Text('사진 선택'),
-            ),
-            ElevatedButton(
-              onPressed: _saveEntry,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
-              child: Text('저장하기'),
-            ),
-            Divider(height: 30),
-            Text('🗂 일기 목록 필터', style: TextStyle(fontWeight: FontWeight.bold)),
-            Wrap(
-              spacing: 8,
-              children: [
-                FilterChip(label: Text('4월'), selected: selectedMonth == '2025-04', onSelected: (selected) => setState(() => _filterBy('month', selected ? '2025-04' : ''))),
-                FilterChip(label: Text('5월'), selected: selectedMonth == '2025-05', onSelected: (selected) => setState(() => _filterBy('month', selected ? '2025-05' : ''))),
-                FilterChip(label: Text('행복'), selected: selectedMood == '행복', onSelected: (selected) => setState(() => _filterBy('mood', selected ? '행복' : ''))),
-                FilterChip(label: Text('우울'), selected: selectedMood == '우울', onSelected: (selected) => setState(() => _filterBy('mood', selected ? '우울' : ''))),
-                FilterChip(label: Text('가족'), selected: selectedCategory == '가족', onSelected: (selected) => setState(() => _filterBy('category', selected ? '가족' : ''))),
-                FilterChip(label: Text('일'), selected: selectedCategory == '일', onSelected: (selected) => setState(() => _filterBy('category', selected ? '일' : ''))),
-              ],
-            ),
-            SizedBox(height: 20),
-            ...filtered.map((entry) => Card(
-              child: ListTile(
-                title: Text('${entry.date} • ${entry.mood} • ${entry.category}'),
-                subtitle: Text(entry.content),
-                trailing: entry.imageUrl != null ? Image.network(entry.imageUrl!, width: 60, fit: BoxFit.cover) : null,
+            if (_pickedImage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+
               ),
-            )),
+            ElevatedButton(onPressed: _saveEntry, child: const Text('저장하기'), style: ElevatedButton.styleFrom(backgroundColor: Colors.pink)),
+            const Divider(),
+            if (filtered.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: Text('작성된 감정일기가 없습니다.')),
+              )
+            else
+              ...filtered.map((e) => Card(
+                child: ListTile(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DiaryDetailPage(entry: e),
+                      ),
+                    );
+                  },
+                  title: Text('${e.date} • ${e.mood} • ${e.category}'),
+                  subtitle: Text(e.content),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (e.imageUrl != null)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () async {
+                          final updated = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditDiaryPage(entry: e),
+                            ),
+                          );
+                          if (updated == true) {
+                            await _loadEntries(); // 수정 후 목록 새로고침
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _deleteEntry(e.id),
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class EditDiaryPage extends StatefulWidget { // 수정 기능 새페이지 이동
+  final DiaryEntry entry;
+  const EditDiaryPage({super.key, required this.entry});
+
+  @override
+  State<EditDiaryPage> createState() => _EditDiaryPageState();
+}
+
+class _EditDiaryPageState extends State<EditDiaryPage> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.entry.content);
+  }
+
+  Future<void> _save() async {
+    final updated = DiaryEntry(
+      id: widget.entry.id,
+      date: widget.entry.date,
+      mood: widget.entry.mood,
+      category: widget.entry.category,
+      content: _controller.text,
+      imageUrl: widget.entry.imageUrl,
+    );
+
+    final res = await http.put(
+      Uri.parse('http://localhost:8005/api/diary/${widget.entry.id}'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(updated.toJson()),
+    );
+
+    if (res.statusCode == 200 && context.mounted) {
+      Navigator.pop(context, true); // 이전 페이지로 이동하면서 true 반환
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('✏️ 일기 수정')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text('날짜: ${widget.entry.date} | 감정: ${widget.entry.mood} | 카테고리: ${widget.entry.category}'),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                maxLines: null,
+                expands: true,
+                decoration: const InputDecoration(
+                  hintText: '일기 내용을 수정하세요...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _save,
+              child: const Text('저장'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class EditContentPage extends StatefulWidget { // 내용 버튼 누르면 새페이지 이동
+  final String initialText;
+  const EditContentPage({super.key, required this.initialText});
+
+  @override
+  State<EditContentPage> createState() => _EditContentPageState();
+}
+
+class _EditContentPageState extends State<EditContentPage> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('📝 일기 작성')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                maxLines: null,
+                expands: true,
+                decoration: const InputDecoration(
+                  hintText: '일기 내용을 입력하세요...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, _controller.text);
+              },
+              child: const Text('완료'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DiaryDetailPage extends StatelessWidget {   //저장된 일기 전체 내용 보기
+  final DiaryEntry entry;
+
+  const DiaryDetailPage({Key? key, required this.entry}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('📖 일기 상세 보기')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('날짜: ${entry.date}', style: const TextStyle(fontSize: 16)),
+            Text('감정: ${entry.mood}', style: const TextStyle(fontSize: 16)),
+            Text('카테고리: ${entry.category}', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 12),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Text(
+                  entry.content,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DiaryWritePage extends StatefulWidget { // 내용+사진 입력페이지
+  final String initialText;
+  final XFile? initialImage;
+
+  const DiaryWritePage({Key? key, this.initialText = '', this.initialImage}) : super(key: key);
+
+  @override
+  State<DiaryWritePage> createState() => _DiaryWritePageState();
+}
+
+class _DiaryWritePageState extends State<DiaryWritePage> {
+  late TextEditingController _controller;
+  XFile? _image;
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+    _image = widget.initialImage;
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) setState(() => _image = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('📝 일기 작성')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                maxLines: null,
+                expands: true,
+                decoration: const InputDecoration(
+                  hintText: '일기 내용을 입력하세요...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, {'text': _controller.text});
+              },
+              child: const Text('완료'),
+            ),
           ],
         ),
       ),
