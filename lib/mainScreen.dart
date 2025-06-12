@@ -1,5 +1,4 @@
 // Sodam/lib/mainScreen.dart
-
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'sera_chat.dart';
@@ -18,7 +17,7 @@ enum PageState { intro, select, chat }
 
 class _HomePageState extends State<HomePage> {
   PageState _page = PageState.intro;
-  int selectedId = 1;
+  int? selectedId = 1;
 
   Future<void> _logout() async {
     await AuthService.logout();
@@ -222,131 +221,135 @@ class _HomePageState extends State<HomePage> {
                   ),
                   itemBuilder: (context, index, realIndex) {
                     final slide = slides[index];
-                    return Container(
-                      width: MediaQuery.of(context).size.width,
-                      margin: const EdgeInsets.symmetric(horizontal: 5.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        image: DecorationImage(
-                          image: AssetImage(slide["src"]),
-                          fit: BoxFit.cover,
-                          colorFilter:
-                              isSelected
-                                  ? ColorFilter.mode(
-                                    Colors.black.withOpacity(0.5),
-                                    BlendMode.darken,
-                                  )
-                                  : null,
+                    final bool isSelected = slide["id"] == selectedId;
+                    return Stack(
+                      children: [
+                        Container(
+                          width: MediaQuery.of(context).size.width,
+                          margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            image: DecorationImage(
+                              image: AssetImage(slide["src"]),
+                              fit: BoxFit.cover,
+                              colorFilter:
+                                  isSelected
+                                      ? ColorFilter.mode(
+                                        Colors.black.withOpacity(0.5),
+                                        BlendMode.darken,
+                                      )
+                                      : null,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    if (isSelected)
-                      Positioned.fill(
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                        if (isSelected)
+                          Positioned.fill(
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      "📖 ${slide["name"]} - ${slide["description"]}",
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          "📖 ${slide["name"]} - ${slide["description"]}",
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                        ),
+                                        onPressed:
+                                            () => setState(() => selectedId = null),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  ...List.generate(slide["features"].length, (i) {
+                                    return Text(
+                                      "• ${slide["features"][i]}",
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
                                       ),
+                                    );
+                                  }),
+                                  const SizedBox(height: 10),
+                                  if (slide["id"] == 1)
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _page = PageState.chat;
+                                          selectedId = 1;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black,
+                                      ),
+                                      child: const Text("하린과 채팅 시작하기"),
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
+                                  if (slide["id"] == 2)
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _page = PageState.chat;
+                                          selectedId = 2;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black,
+                                      ),
+                                      child: const Text("세라와 채팅 시작하기"),
+                                      ),
+                                  if (slide["id"] == 3)
+                                    ElevatedButton(
+                                      onPressed: () {
+                                      setState(() {
+                                        _page = PageState.chat;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black,
+                                      ),
+                                      child: const Text("미나와 채팅 시작하기"),
                                     ),
-                                    onPressed:
-                                        () => setState(() => selectedId = null),
-                                  ),
+                                  if (slide["id"] == 4)
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _page = PageState.chat;
+                                          selectedId = 4;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black,
+                                      ),
+                                      child: const Text("유리와 채팅 시작하기"),
+                                    ),
                                 ],
                               ),
-                              const SizedBox(height: 10),
-                              ...List.generate(slide["features"].length, (i) {
-                                return Text(
-                                  "• ${slide["features"][i]}",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                  ),
-                                );
-                              }),
-                              const SizedBox(height: 10),
-                              if (slide["id"] == 1)
-                                ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _page = PageState.chat;
-                                      selectedId = 1;
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                  ),
-                                  child: const Text("하린과 채팅 시작하기"),
-                                ),
-                              if (slide["id"] == 2)
-                                ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _page = PageState.chat;
-                                      selectedId = 2;
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                  ),
-                                  child: const Text("세라와 채팅 시작하기"),
-                                  ),
-                                  if (selectedId == 3)
-                          ElevatedButton(
-                            onPressed: () {
-                            setState(() {
-                              _page = PageState.chat;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
+                            ),
                           ),
-                          child: const Text("미나와 채팅 시작하기"),
-                          ),
-                              if (slide["id"] == 4)
-                                ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _page = PageState.chat;
-                                      selectedId = 4;
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                  ),
-                                  child: const Text("유리와 채팅 시작하기"),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
-              );
-            },
+              ],
+            ),
           ),
         );
-
       case PageState.chat:
         if (selectedId == 1) {
           return HarinChat(

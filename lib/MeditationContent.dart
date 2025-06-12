@@ -11,47 +11,67 @@ class MeditationContent extends StatefulWidget {
 
 class _MeditationContentState extends State<MeditationContent> {
   final AudioPlayer _mainPlayer = AudioPlayer();
-  final AudioPlayer _rainPlayer = AudioPlayer();
-  bool isPlaying = false;
-  bool backgroundRain = false;
-  String selected = '수면 명상';
+  final AudioPlayer _bgPlayer = AudioPlayer();
 
-  final Map<String, String> sources = {
-    '수면 명상': 'assets/sounds/sleep.mp3',
-    '스트레스 해소': 'assets/sounds/stress.mp3',
-    '마음 안정': 'assets/sounds/peace.mp3',
+  bool isPlaying = false;
+  String selectedMain = '기상 명상';
+  String? selectedBg;
+
+  final Map<String, String> mainSources = {
+    '기상 명상': 'assets/sounds/wake_web.mp3',
+    '스트레스 해소': 'assets/sounds/stress_fixed.mp3',
+    '마음 안정': 'assets/sounds/peace_fixed.mp3',
+  };
+
+  final Map<String, String> bgSources = {
+    '기상': 'assets/sounds/wake_web.mp3',
+    '힐링': 'assets/sounds/stress_fixed.mp3',
+    '안정': 'assets/sounds/peace_fixed.mp3',
+    '빗소리': 'assets/sounds/rain_fixed.mp3',
   };
 
   @override
   void initState() {
     super.initState();
-    _mainPlayer.onPlayerStateChanged.listen((PlayerState state) {
-      setState(() {
-        isPlaying = state == PlayerState.playing;
-      });
+    _mainPlayer.onPlayerStateChanged.listen((state) {
+      setState(() => isPlaying = state == PlayerState.playing);
     });
+    _bgPlayer.setReleaseMode(ReleaseMode.loop);
   }
 
   @override
   void dispose() {
     _mainPlayer.dispose();
-    _rainPlayer.dispose();
+    _bgPlayer.dispose();
     super.dispose();
   }
 
-  Future<void> _playMainSound(String label) async {
-    await _mainPlayer.stop();
-    await _mainPlayer.play(AssetSource(sources[label]!));
+  Future<void> _toggleMain() async {
+    if (isPlaying) {
+      await _mainPlayer.pause();
+    } else {
+      await _mainPlayer.stop();
+      await _mainPlayer.play(AssetSource(mainSources[selectedMain]!));
+    }
   }
 
-  Future<void> _toggleRain(bool enabled) async {
-    setState(() => backgroundRain = enabled);
-    if (enabled) {
-      await _rainPlayer.setReleaseMode(ReleaseMode.loop);
-      await _rainPlayer.play(AssetSource("assets/sounds/rain.mp3"));
+  Future<void> _selectMain(String label) async {
+    selectedMain = label;
+    await _mainPlayer.stop();
+    await _mainPlayer.play(AssetSource(mainSources[label]!));
+    setState(() => isPlaying = true);
+  }
+
+  Future<void> _selectBg(String label) async {
+    if (selectedBg == label) {
+      await _bgPlayer.stop();
+      selectedBg = null;
     } else {
-      await _rainPlayer.stop();
+      selectedBg = label;
+      await _bgPlayer.stop();
+      await _bgPlayer.play(AssetSource(bgSources[label]!));
     }
+    setState(() {});
   }
 
   @override
@@ -77,59 +97,50 @@ class _MeditationContentState extends State<MeditationContent> {
               const SizedBox(height: 16),
               Wrap(
                 spacing: 10,
-                children: sources.keys.map((label) {
-                  final isSelected = label == selected;
+                children: mainSources.keys.map((label) {
                   return ChoiceChip(
                     label: Text(label),
-                    selected: isSelected,
-                    onSelected: (_) {
-                      setState(() => selected = label);
-                      _playMainSound(label);
-                    },
+                    selected: label == selectedMain,
+                    onSelected: (_) => _selectMain(label),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 30),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+              Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
+                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("🎧 $selected 오디오", style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text("🎧 $selectedMain 오디오", style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                          onPressed: () {
-                            if (isPlaying) {
-                              _mainPlayer.pause();
-                            } else {
-                              _playMainSound(selected);
-                            }
-                          },
-                        ),
-                        const Text("명상음 재생/정지")
-                      ],
+                    TextButton.icon(
+                      onPressed: _toggleMain,
+                      icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                      label: Text(isPlaying ? '정지' : '재생'),
                     ),
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: backgroundRain,
-                          onChanged: (val) => _toggleRain(val!),
-                        ),
-                        const Text("배경 사운드 (빗소리)")
-                      ],
+                    const SizedBox(height: 20),
+                    Text("🔊 배경 사운드", style: const TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      children: bgSources.keys.map((label) {
+                        final sel = label == selectedBg;
+                        return ChoiceChip(
+                          label: Text(label),
+                          selected: sel,
+                          onSelected: (_) => _selectBg(label),
+                          selectedColor: Colors.indigo.withOpacity(0.2),
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),

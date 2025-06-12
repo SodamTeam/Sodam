@@ -1,7 +1,7 @@
 name: Sodam
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
+# pub.dev using flutter pub publish. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
@@ -23,21 +23,22 @@ environment:
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
-# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# consider running flutter pub upgrade --major-versions. Alternatively,
 # dependencies can be manually updated by changing the version numbers below to
 # the latest version available on pub.dev. To see which dependencies have newer
-# versions available, run `flutter pub outdated`.
+# versions available, run flutter pub outdated.
 dependencies:
   flutter:
     sdk: flutter
-
+  flutter_localizations:
+    sdk: flutter
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
   carousel_slider: ^5.0.0
   sqflite: ^2.0.0+4
   path_provider: ^2.0.11
-  intl: ^0.17.0
+  intl: ^0.20.2
   drift: ^2.7.0
   drift_sqflite: ^2.0.0
   hive: ^2.2.3
@@ -60,7 +61,7 @@ dev_dependencies:
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
+  # activated in the analysis_options.yaml file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
@@ -72,6 +73,16 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Light.ttf
+    - family: Lexend
+      fonts:
+        - asset: assets/fonts/Lexend-Regular.ttf
+    - family: NanumGothic
+      fonts:
+        - asset: assets/fonts/NanumGothic-Regular.ttf
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -88,6 +99,10 @@ flutter:
     - assets/profile.png
     - assets/harin_chat.jpg
     - assets/yuri_profile.png
+    - assets/sounds/wake_fixed.mp3
+    - assets/sounds/stress_fixed.mp3
+    - assets/sounds/peace_fixed.mp3
+    - assets/sounds/rain_fixed.mp3
     - assets/introback.png
     - assets/introicon.png
     - assets/sodam_icon.png
