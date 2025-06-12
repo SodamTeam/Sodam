@@ -1,14 +1,14 @@
 // Sodam/lib/sera_chart.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'chat_service.dart';
+import 'profile_service.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'profile_service.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:io';
 import 'config.dart';
-import 'chat_service.dart';
 
 class SeraChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -22,6 +22,9 @@ class SeraChat extends StatefulWidget {
 class _SeraChatState extends State<SeraChat> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _textFieldFocus = FocusNode();
+  final ChatService chatService = ChatService(); // ◆ 수정: chatService 인스턴스 추가
+  final int userId = 3; // ◆ 수정: userId 정의
 
   List<Map<String, String>> messages = [
     {'sender': 'sera', 'text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?'},
@@ -39,12 +42,44 @@ class _SeraChatState extends State<SeraChat> {
     'default': '기본',
   };
 
-  String get _baseUrl => '${Config.baseUrl}/generate';
+  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
 
   @override
   void initState() {
     super.initState();
     _loadProfile(); // 프로필 로드 함수 호출
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final hist = await chatService.fetchHistory(
+        userId,
+        'sera',
+      ); // ◆ 수정: 'sera' 채팅방으로 로드
+      final List<Map<String, String>> loaded =
+          hist
+              .map(
+                (e) => {
+                  'sender': e['sender'] as String,
+                  'text': e['content'] as String,
+                },
+              )
+              .toList();
+
+      setState(() {
+        messages = [
+          {
+            'sender': 'sera',
+            'text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?',
+          },
+          ...loaded,
+        ];
+      });
+      _scrollToBottom();
+    } catch (e) {
+      print('히스토리 로드 에러: $e');
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -61,7 +96,7 @@ class _SeraChatState extends State<SeraChat> {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/generate'),
+        Uri.parse(_baseUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'model': 'gemma3:4b',
@@ -76,7 +111,7 @@ class _SeraChatState extends State<SeraChat> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['response'];
+        return data['response'] as String;
       } else {
         throw Exception('Failed to generate response');
       }
@@ -88,14 +123,21 @@ class _SeraChatState extends State<SeraChat> {
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
+
+    await chatService.saveHistory(userId, 'sera', 'user', input);
+
     setState(() {
       messages.add({'sender': 'user', 'text': input});
       _controller.clear();
       _isLoading = true;
     });
 
+    _scrollToBottom();
+
+    await chatService.saveHistory(userId, 'sera', 'user', input);
+
     try {
-      final String apiUrl = '${Config.baseUrl}/api/chat/generate';
+      final String apiUrl = _baseUrl;
 
       // 이전 대화 내용을 포함한 프롬프트 생성
       String conversationHistory = '';
@@ -120,53 +162,31 @@ class _SeraChatState extends State<SeraChat> {
       } else if (mode == 'learning-path') {
         promptWithPrefix = '학습 로드맵을 만들어줘!\n$conversationHistory';
       }
+      final resp = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': promptWithPrefix,
+          'mode': mode,
+          'stream': false, // 스트림 비활성화
+          'system': systemPrompt,
+          'character': 'sera',
+          'name': '세라',
+        }),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('서버 오류 ${resp.statusCode}');
+      }
 
-      final request = http.Request('POST', Uri.parse(apiUrl));
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode({
-        'model': 'gemma3:4b',
-        'prompt': promptWithPrefix,
-        'mode': mode,
-        'stream': true,
-        'system': systemPrompt,
-        'character': 'sera',
-        'name': '세라',
+      final data = jsonDecode(resp.body);
+      final String reply = data['response'] as String; // 전체 응답 키로 파싱
+
+      setState(() {
+        messages.add({'sender': 'sera', 'text': reply});
       });
-
-      final response = await request.send();
-
-      if (response.statusCode != 200) {
-        final errorBody = await response.stream.bytesToString();
-        print('Server Error Body: $errorBody');
-        throw Exception('서버 오류: ${response.statusCode} - $errorBody');
-      }
-
-      final stream = response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter());
-
-      String fullResponse = '';
-      await for (final line in stream) {
-        if (line.startsWith('data: ')) {
-          try {
-            final data = jsonDecode(line.substring(6));
-            if (data['response'] != null) {
-              final chunk = data['response'] as String;
-              fullResponse += chunk;
-              setState(() {
-                if (messages.isNotEmpty && messages.last['sender'] == 'sera') {
-                  messages.last['text'] = fullResponse;
-                } else {
-                  messages.add({'sender': 'sera', 'text': fullResponse});
-                }
-              });
-              _scrollToBottom();
-            }
-          } catch (e) {
-            print('Error parsing JSON for streaming: $e - Line: $line');
-          }
-        }
-      }
+      await chatService.saveHistory(userId, 'sera', 'sera', reply);
+      _scrollToBottom();
     } catch (e) {
       print('Error in _sendMessage: $e');
       setState(() {
@@ -234,9 +254,17 @@ class _SeraChatState extends State<SeraChat> {
         messages.add({'sender': 'sera', 'text': reply});
         _isLoading = false;
       });
-
+      await chatService.saveHistory(userId, 'sera', 'sera', reply);
       _scrollToBottom();
     }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    _textFieldFocus.dispose();
+    super.dispose();
   }
 
   @override

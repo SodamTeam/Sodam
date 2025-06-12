@@ -23,7 +23,7 @@ class _YuriChatState extends State<YuriChat> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _textFieldFocus = FocusNode();
   final ChatService chatService = ChatService();
-  final int userId = 1;
+  final int userId = 2;
 
   List<Map<String, String>> messages = [
     {
@@ -44,8 +44,7 @@ class _YuriChatState extends State<YuriChat> {
     'default': '기본',
   };
 
-  String get _baseUrl =>
-      'http://localhost:8000/generate'; // chat-service의 새로운 URL로 수정
+  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
 
   @override
   void initState() {
@@ -97,7 +96,7 @@ class _YuriChatState extends State<YuriChat> {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/generate'),
+        Uri.parse(_baseUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'model': 'gemma3:4b',
@@ -136,7 +135,7 @@ class _YuriChatState extends State<YuriChat> {
     await chatService.saveHistory(userId, 'yuri', 'user', input);
 
     try {
-      final String apiUrl = '${Config.baseUrl}/api/chat/generate';
+      final String apiUrl = _baseUrl;
 
       // 이전 대화 내용을 포함한 프롬프트 생성
       String conversationHistory = '';
@@ -161,6 +160,33 @@ class _YuriChatState extends State<YuriChat> {
       } else if (mode == 'science-news') {
         promptWithPrefix = '최신 과학 뉴스를 알려줘!\n$conversationHistory';
       }
+
+      final resp = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': promptWithPrefix,
+          'mode': mode,
+          'stream': false, // 수정: 반드시 false
+          'system': systemPrompt,
+          'character': 'yuri',
+          'name': '유리',
+        }),
+      );
+
+      if (resp.statusCode != 200) {
+        throw Exception('서버 오류 ${resp.statusCode}: ${resp.body}');
+      }
+
+      final data = jsonDecode(resp.body);
+      final String reply = data['response'] as String; // 수정: 전체 응답 한 번에 추출
+
+      setState(() {
+        messages.add({'sender': 'yuri', 'text': reply}); // 수정: 한 번에 추가
+      });
+      await chatService.saveHistory(userId, 'yuri', 'yuri', reply);
+      _scrollToBottom();
     } catch (e) {
       print('Error in _sendMessage: $e');
       setState(() {

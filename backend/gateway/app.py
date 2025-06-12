@@ -45,7 +45,7 @@ async def handle_chat_generate(request: Request):
                     async with httpx.AsyncClient() as client:
                         async with client.stream(
                             'POST',
-                            f"{CHAT_SERVICE_URL}/generate", # chat-service의 올바른 엔드포인트
+                            f"{CHAT_SERVICE_URL}/api/chat/generate", #올바른 엔드포인트
                             json=request_data,
                             timeout=30.0
                         ) as response:
@@ -65,7 +65,7 @@ async def handle_chat_generate(request: Request):
         else:
             # 비스트리밍 요청 처리
             response = await http_client.post(
-                f"{CHAT_SERVICE_URL}/generate", # chat-service의 올바른 엔드포인트
+                f"{CHAT_SERVICE_URL}/api/chat/generate", # chat-service의 올바른 엔드포인트
                 json=request_data
             )
             response.raise_for_status()
