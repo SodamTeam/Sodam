@@ -6,6 +6,7 @@ import 'profile_service.dart';
 import 'package:flutter/foundation.dart';
 import 'config.dart';
 import 'chat_service.dart';
+import 'chat_service.dart';
 
 class SeraChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -37,6 +38,7 @@ class _SeraChatState extends State<SeraChat> {
     'default': '기본',
   };
 
+  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
   String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
 
   @override
@@ -83,6 +85,7 @@ class _SeraChatState extends State<SeraChat> {
           'system': systemPrompt,
           'character': 'sera',
           'name': '세라',
+          'name': '세라',
         }),
       );
 
@@ -127,6 +130,10 @@ class _SeraChatState extends State<SeraChat> {
       _controller.clear();
       _isLoading = true;
     });
+
+    _scrollToBottom();
+
+    await chatService.saveHistory(userId, 'sera', 'user', input);
 
     await chatService.saveHistory(userId, 'sera', 'user', input);
 
@@ -221,6 +228,14 @@ class _SeraChatState extends State<SeraChat> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    _textFieldFocus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xfff0f4f8),
@@ -231,6 +246,7 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey)),
                 border: Border(bottom: BorderSide(color: Colors.grey)),
               ),
               child: Row(
@@ -274,16 +290,23 @@ class _SeraChatState extends State<SeraChat> {
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: messages.length,
                 itemBuilder: (context, idx) {
                   final msg = messages[idx];
                   final isSera = msg['sender'] == 'sera';
                   return Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    alignment: isSera ? Alignment.centerLeft : Alignment.centerRight,
+                    alignment:
+                        isSera ? Alignment.centerLeft : Alignment.centerRight,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: isSera ? Colors.white : Colors.blue[100],
                         borderRadius: BorderRadius.circular(16),
@@ -330,6 +353,7 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey)),
                 border: Border(top: BorderSide(color: Colors.grey)),
               ),
               child: Row(

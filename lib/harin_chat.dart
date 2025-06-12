@@ -71,22 +71,25 @@
       });
     }
 
-    // 👇 한 글자씩 타이핑되는 애니메이션 응답
-    Future<void> _generateAnimatedResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
-      try {
-        final response = await http.post(
-          Uri.parse(_baseUrl),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'model': 'gemma3:4b',
-            'prompt': input,
-            'mode': mode,
-            'stream': false,
-            'system': systemPrompt,
-            'character': 'harin',
-            'name': '하린',
-          }),
-        );
+  Future<String> _generateResponse(
+    String input, {
+    String? systemPrompt,
+    String mode = 'chat',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${Config.baseUrl}/api/chat/generate'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': input,
+          'mode': mode,
+          'stream': false,
+          'system': systemPrompt,
+          'character': 'harin',
+          'name': '하린',
+        }),
+      );
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -132,12 +135,99 @@
 
       await chatService.saveHistory(userId, 'harin', 'user', input);
 
-      await _generateAnimatedResponse(
-        input,
-        systemPrompt: systemPrompt,
-        mode: mode == 'book-recommendation' ? 'book' : mode,
-      );
+    // 이전 대화 내용을 포함한 프롬프트 생성
+    String conversationHistory = '';
+    for (var i = 0; i < messages.length - 1; i++) {
+      final message = messages[i];
+      if (message['sender'] == 'user') {
+        conversationHistory += '사용자: ${message['text']}\n';
+      } else {
+        conversationHistory += '하린: ${message['text']}\n';
+      }
     }
+    conversationHistory += '사용자: $input';
+
+    // 모드에 따라 prefix 추가
+    String promptWithPrefix = conversationHistory;
+    if (mode == 'novel-helper') {
+      promptWithPrefix = '소설 작성을 도와줘!\n$conversationHistory';
+    } else if (mode == 'literary-analysis') {
+      promptWithPrefix = '문학 작품을 분석해줘!\n$conversationHistory';
+    } else if (mode == 'poetry-play') {
+      promptWithPrefix = '시를 함께 써보자!\n$conversationHistory';
+    }
+
+    // 일반 채팅이 아닌 경우 스트리밍 사용
+    if (mode != 'chat') {
+      final request = http.Request('POST', Uri.parse('${Config.baseUrl}/api/chat/generate'));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': promptWithPrefix,
+        'mode': mode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'harin',
+        'name': '하린',
+      });
+
+      final response = await request.send();
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      String fullResponse = '';
+      await for (final line in stream) {
+        if (line.startsWith('data: ')) {
+          final data = jsonDecode(line.substring(6));
+          final chunk = data['response'] as String;
+
+          setState(() {
+            if (messages.isNotEmpty && messages.last['sender'] == 'harin') {
+              messages.last['text'] = fullResponse + chunk;
+            } else {
+              messages.add({'sender': 'harin', 'text': chunk});
+            }
+            fullResponse += chunk;
+          });
+          _scrollToBottom();
+        }
+      }
+      setState(() {
+        _isLoading = false;
+      });
+      // 스트리밍이 완료된 후 응답 저장
+      await chatService.saveHistory(userId, 'harin', 'harin', fullResponse);
+      return;
+    }
+
+    // 일반 채팅의 경우
+    final reply = await _generateResponse(
+      promptWithPrefix,  // 이전 대화 내용이 포함된 프롬프트 사용
+      systemPrompt: systemPrompt,
+      mode: mode,
+    );
+
+    setState(() {
+      messages.add({'sender': 'harin', 'text': reply});
+      _isLoading = false;
+    });
+    _scrollToBottom();
+
+    await chatService.saveHistory(userId, 'harin', 'harin', reply);
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
     void _changeMode(String newMode) async {
       setState(() {
@@ -170,21 +260,21 @@
         return;
       }
 
-      try {
-        final request = http.Request(
-          'POST',
-          Uri.parse('${Config.baseUrl}/api/chat/generate-stream'),
-        );
-        request.headers['Content-Type'] = 'application/json';
-        request.body = jsonEncode({
-          'model': 'gemma3:4b',
-          'prompt': initialPrompt,
-          'mode': newMode == 'book-recommendation' ? 'book' : newMode,
-          'stream': true,
-          'system': systemPrompt,
-          'character': 'harin',
-          'name': '하린',
-        });
+    try {
+      final request = http.Request(
+        'POST',
+        Uri.parse('${Config.baseUrl}/api/chat/generate'),
+      ); // API Gateway URL 사용
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': initialPrompt,
+        'mode': newMode == 'book-recommendation' ? 'book' : newMode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'harin',
+        'name': '하린',
+      });
 
         final response = await request.send();
         final stream = response.stream.transform(utf8.decoder).transform(const LineSplitter());

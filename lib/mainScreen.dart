@@ -54,7 +54,7 @@ class _HomePageState extends State<HomePage> {
       "src": "assets/girl4.png",
       "name": "유리",
       "description": "세상을 탐험하는 과학 소녀",
-      "features": ['퀴즈 챌린지', '실험 시뮬레이션', '콰학 뉴스 브리핑', '별자리 관찰 가이드'],
+      "features": ['퀴즈 챌린지', '실험 시뮬레이션', '과학 뉴스 브리핑', '별자리 관찰 가이드'],
     },
   ];
 
@@ -196,10 +196,7 @@ class _HomePageState extends State<HomePage> {
           appBar: AppBar(
             title: const Text("캐릭터 선택"),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: _logout,
-              ),
+              IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
             ],
           ),
           body: Center(
@@ -234,12 +231,13 @@ class _HomePageState extends State<HomePage> {
                             image: DecorationImage(
                               image: AssetImage(slide["src"]),
                               fit: BoxFit.cover,
-                              colorFilter: isSelected
-                                  ? ColorFilter.mode(
-                                      Colors.black.withOpacity(0.5),
-                                      BlendMode.darken,
-                                    )
-                                  : null,
+                              colorFilter:
+                                  isSelected
+                                      ? ColorFilter.mode(
+                                        Colors.black.withOpacity(0.5),
+                                        BlendMode.darken,
+                                      )
+                                      : null,
                             ),
                           ),
                         ),
@@ -268,15 +266,18 @@ class _HomePageState extends State<HomePage> {
                                           Icons.close,
                                           color: Colors.white,
                                         ),
-                                        onPressed: () => setState(() {
-                                          selectedId = 0;
-                                          isSelected = false;
-                                        }),
+                                        onPressed:
+                                            () => setState(() {
+                                              selectedId = 0;
+                                              isSelected = false;
+                                            }),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 10),
-                                  ...List.generate(slide["features"].length, (i) {
+                                  ...List.generate(slide["features"].length, (
+                                    i,
+                                  ) {
                                     return Text(
                                       "• ${slide["features"][i]}",
                                       style: const TextStyle(
@@ -347,9 +348,7 @@ class _HomePageState extends State<HomePage> {
               },
             );
           default:
-            return const Scaffold(
-              body: Center(child: Text("캐릭터를 선택해주세요.")),
-            );
+            return const Scaffold(body: Center(child: Text("캐릭터를 선택해주세요.")));
         }
     }
   }

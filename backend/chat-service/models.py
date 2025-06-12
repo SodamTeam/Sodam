@@ -1,6 +1,7 @@
 # backend/chat-service/models.py
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
 

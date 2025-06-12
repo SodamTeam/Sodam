@@ -30,7 +30,8 @@ def get_db():
     finally:
         db.close()
 
-OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/generate")
+# API 설정
+OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/chat")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemma3:4b")
 GOOGLE_BOOKS_API = "https://www.googleapis.com/books/v1/volumes"
 API_GATEWAY_URL = "http://localhost:8000"
@@ -38,9 +39,10 @@ API_GATEWAY_URL = "http://localhost:8000"
 class GenerateRequest(BaseModel):
     user_id: int = 0
     model: str
+    messages: List[dict] | None = None
     prompt: str | None = None
-    mode: str
-    stream: bool = False
+    mode: str  # 'novel', 'analyze', 'poem', 'book'
+    stream: bool = True
     system: str | None = None
     character: str | None = None
     name: str | None = None
@@ -55,7 +57,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
-@app.post("/generate", response_model=GenerateResponse)
+@app.post("/api/chat/generate", response_model=GenerateResponse)
 async def generate(req: GenerateRequest):
     try:
         if req.character:
@@ -64,7 +66,7 @@ async def generate(req: GenerateRequest):
                 if profile_response.status_code == 200:
                     profile = profile_response.json()
                     system_name = req.name if req.name else profile['name']
-                    req.system = f"""
+                    system_message = f"""
                     네 이름은 {system_name}이야. 너는 {profile['description']}이야.
                     {profile['personality']}
                     관심사: {profile['interests']}
@@ -101,13 +103,20 @@ async def generate(req: GenerateRequest):
 
                 return GenerateResponse(response="\n\n".join(results))
 
+        # Ollama API 호출을 위한 메시지 구성
+        messages = []
+        if req.system:
+            messages.append({"role": "system", "content": req.system})
+        if req.prompt:
+            messages.append({"role": "user", "content": req.prompt})
+        if req.messages:
+            messages.extend(req.messages)
+
         payload = {
             "model": req.model,
-            "prompt": req.prompt or "기본 프롬프트",
+            "messages": messages,
             "stream": req.stream,
         }
-        if req.system:
-            payload["system"] = req.system
 
         if req.stream:
             async def stream_and_store():
@@ -118,9 +127,8 @@ async def generate(req: GenerateRequest):
                             if line:
                                 try:
                                     data = json.loads(line)
-                                    chunk = data.get("response", "")
-                                    response_text += chunk
-                                    yield f"data: {json.dumps({'response': chunk})}\n\n"
+                                    if 'message' in data:
+                                        yield f"data: {json.dumps({'response': data['message']['content']})}\n\n"
                                 except json.JSONDecodeError:
                                     continue
                 # DB 저장
@@ -144,7 +152,7 @@ async def generate(req: GenerateRequest):
                 resp.raise_for_status()
                 data = resp.json()
 
-            result = data.get("response")
+            result = data.get("message", {}).get("content")
             if not result:
                 raise HTTPException(status_code=500, detail="LLM 응답이 비어 있어요.")
 
@@ -167,3 +175,75 @@ async def generate(req: GenerateRequest):
     except Exception as e:
         print(f"Error in generate: {str(e)}")
         raise HTTPException(status_code=500, detail=f"서버 오류: {e}")
+
+@app.post("/generate", response_model=GenerateResponse)
+async def generate_alias(request: GenerateRequest):
+    # /api/chat/generate 로직을 그대로 호출하는 alias 엔드포인트
+    return await generate(request)
+
+@app.post("/chat", response_model=schemas.ChatResponse)
+async def create_chat(chat: schemas.ChatCreate, db: Session = Depends(get_db)):
+    # Ollama API 호출
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            OLLAMA_API_URL,
+            json={
+                "model": DEFAULT_MODEL,
+                "prompt": chat.message,
+                "stream": False
+            }
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail="Failed to generate response")
+        
+        ai_response = response.json()["response"]
+    
+    # 채팅 기록 저장
+    db_chat = models.Chat(
+        user_id=chat.user_id,
+        message=chat.message,
+        response=ai_response
+    )
+    db.add(db_chat)
+    db.commit()
+    db.refresh(db_chat)
+    
+    return db_chat
+
+@app.get("/chat/history/{user_id}", response_model=List[schemas.Chat])
+def get_chat_history(user_id: int, db: Session = Depends(get_db)):
+    chats = db.query(models.Chat).filter(models.Chat.user_id == user_id).all()
+    return chats
+
+@app.post("/generate-response", response_model=ChatResponse)
+async def generate_response(request: ChatRequest):
+    try:
+        # 프로필 서비스에서 캐릭터 정보 가져오기
+        async with httpx.AsyncClient() as client:
+            profile_response = await client.get(f"{API_GATEWAY_URL}/api/profile/{request.character}")  # API Gateway 사용
+            if profile_response.status_code != 200:
+                raise HTTPException(status_code=404, detail="Character not found")
+            
+            profile = profile_response.json()
+            system_prompt = f"""
+            너는 {profile['name']}이야. {profile['description']}
+            {profile['personality']}
+            관심사: {profile['interests']}
+            배경: {profile['background']}
+            """
+            
+            # 여기에 실제 AI 모델 호출 코드 추가
+            # 임시로 에코 응답
+            return ChatResponse(response=f"{profile['name']}: {request.message}")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/message")
+async def save_message(message: dict):
+    try:
+        # 여기에 메시지 저장 로직 구현
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
