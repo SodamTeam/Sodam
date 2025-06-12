@@ -7,6 +7,7 @@ import 'auth_services/signup_screen.dart';
 import 'mainScreen.dart';
 
 void main() => runApp(const MyApp());
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
         '/': (_) => const IntroScreen(),
         '/login': (_) => const LoginScreen(),
         '/signup': (_) => const SignupScreen(),
-        '/home':  (_) => const HomePage(),
+        '/home': (_) => const HomePage(),
       },
       debugShowCheckedModeBanner: false,
     );

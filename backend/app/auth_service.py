@@ -1,3 +1,5 @@
+# backend/app/auth_service.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -49,29 +51,34 @@ def verify_password(plain: str, hashed: str) -> bool:
 # 라우터 정의
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-@router.post("/signup", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=UserOut, status_code=201)
 def signup(user: UserCreate, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.email == user.email).first():
-        raise HTTPException(status_code=409, detail="이미 가입된 이메일입니다.")
+    if db.query(User).filter(User.username == user.username).first():
+        raise HTTPException(status_code=409, detail="이미 사용 중인 ID 입니다.")
     new_user = User(
-        email=user.email,
-        hashed_password=get_password_hash(user.password),
+        username=user.username,
+        hashed_password=get_password_hash(user.pw),
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
+# backend/app/auth_service.py  --- 하단 부분만
 @router.post("/login", response_model=Token)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(User.email == form_data.username).first()
+    user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="아이디 또는 비밀번호가 잘못되었습니다.",
         )
-    token = create_access_token({"sub": user.email})
-    return {"access_token": token, "token_type": "bearer"}
+
+    # 토큰 생성
+    access_token = create_access_token({"sub": user.username})
+
+    # 정상 응답
+    return {"access_token": access_token, "token_type": "bearer"}

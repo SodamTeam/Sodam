@@ -64,7 +64,7 @@ class _SignupScreenState extends State<SignupScreen> {
             TextFormField(
               controller: _emailCtrl,
               decoration: const InputDecoration(
-                hintText: '아이디(이메일) 입력',
+                hintText: '아이디 입력',
                 prefixIcon: Icon(Icons.email),
                 filled: true,
                 fillColor: Colors.white,

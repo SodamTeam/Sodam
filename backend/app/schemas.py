@@ -1,15 +1,15 @@
-from pydantic import BaseModel, EmailStr, constr
+# backend/app/schemas.py
+
+from pydantic import BaseModel, constr
 
 class UserCreate(BaseModel):
-    email: EmailStr
-    password: constr(min_length=8)
+    username: constr(min_length=1, max_length=50)
+    pw: constr(min_length=1)
 
 class UserOut(BaseModel):
     id: int
-    email: EmailStr
-
-    class Config:
-        orm_mode = True
+    username: str
+    class Config: orm_mode = True
 
 class Token(BaseModel):
     access_token: str

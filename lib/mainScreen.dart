@@ -63,34 +63,129 @@ class _HomePageState extends State<HomePage> {
       case PageState.intro:
         return Scaffold(
           appBar: AppBar(
-            title: const Text("소담"),
+            title: const Text(
+              "소담",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+                fontFamily: 'Pretendard',
+              ),
+            ),
+            backgroundColor: Colors.white,
+            elevation: 0,
             actions: [
               IconButton(
-                icon: const Icon(Icons.logout),
+                icon: const Icon(Icons.logout, color: Colors.black87),
                 onPressed: _logout,
               ),
             ],
           ),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  "안녕하세요!",
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                const Text("맞춤형 챗봇을 선택해봐!", style: TextStyle(fontSize: 18)),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _page = PageState.select;
-                    });
-                  },
-                  child: const Text("AI 챗봇 선택"),
-                ),
-              ],
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFF3E8FF), // soft lavender
+                  Color(0xFFFFFBF0), // warm ivory
+                ],
+              ),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF5B4B8A).withOpacity(0.15),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/introicon.png',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  const Text(
+                    "소담에 오신 걸 환영해요 🌸",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF5B4B8A),
+                      fontFamily: 'Pretendard',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "맞춤형 챗봇을 선택해봐!",
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF8F7BA3),
+                      fontFamily: 'Pretendard',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "일상에 스며드는 AI 친구, 소담",
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Color(0xFFB8AFC9),
+                      fontFamily: 'Pretendard',
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  Container(
+                    width: 220,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      color: const Color(0xFFFCEEF3),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _page = PageState.select;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: const Color(0xFF5B4B8A),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.favorite_outline),
+                          SizedBox(width: 8),
+                          Text(
+                            "소담 친구 만나기",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Pretendard',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -135,90 +230,120 @@ class _HomePageState extends State<HomePage> {
                         image: DecorationImage(
                           image: AssetImage(slide["src"]),
                           fit: BoxFit.cover,
+                          colorFilter:
+                              isSelected
+                                  ? ColorFilter.mode(
+                                    Colors.black.withOpacity(0.5),
+                                    BlendMode.darken,
+                                  )
+                                  : null,
                         ),
                       ),
-                    );
-                  },
-                ),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "📖 ${slides[selectedId - 1]["name"]} - ${slides[selectedId - 1]["description"]}",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    if (isSelected)
+                      Positioned.fill(
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      "📖 ${slide["name"]} - ${slide["description"]}",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed:
+                                        () => setState(() => selectedId = null),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              ...List.generate(slide["features"].length, (i) {
+                                return Text(
+                                  "• ${slide["features"][i]}",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                );
+                              }),
+                              const SizedBox(height: 10),
+                              if (slide["id"] == 1)
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _page = PageState.chat;
+                                      selectedId = 1;
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                  ),
+                                  child: const Text("하린과 채팅 시작하기"),
+                                ),
+                              if (slide["id"] == 2)
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _page = PageState.chat;
+                                      selectedId = 2;
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                  ),
+                                  child: const Text("세라와 채팅 시작하기"),
+                                  ),
+                                  if (selectedId == 3)
+                          ElevatedButton(
+                            onPressed: () {
+                            setState(() {
+                              _page = PageState.chat;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                          ),
+                          child: const Text("미나와 채팅 시작하기"),
+                          ),
+                              if (slide["id"] == 4)
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _page = PageState.chat;
+                                      selectedId = 4;
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                  ),
+                                  child: const Text("유리와 채팅 시작하기"),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      ...List.generate(slides[selectedId - 1]["features"].length, (i) {
-                        return Text(
-                          "• ${slides[selectedId - 1]["features"][i]}",
-                          style: const TextStyle(
-                            fontSize: 14,
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 20),
-                      if (selectedId == 1)
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _page = PageState.chat;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                          ),
-                          child: const Text("하린과 채팅 시작하기"),
-                        ),
-                      if (selectedId == 2)
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _page = PageState.chat;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                          ),
-                          child: const Text("세라와 채팅 시작하기"),
-                        ),
-                      if (selectedId == 3)
-                        ElevatedButton(
-                          onPressed: () {
-                           setState(() {
-                             _page = PageState.chat;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                         ),
-                         child: const Text("미나와 채팅 시작하기"),
-                        ),
-                      if (selectedId == 4)
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _page = PageState.chat;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                          ),
-                          child: const Text("유리와 채팅 시작하기"),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         );
 
