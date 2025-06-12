@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'profile_service.dart';
 import 'package:flutter/foundation.dart';
 import 'config.dart';
+import 'chat_service.dart';
 
 class HarinChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -17,12 +18,11 @@ class HarinChat extends StatefulWidget {
 class _HarinChatState extends State<HarinChat> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final int userId = 1;
+  final ChatService chatService = ChatService();
 
   List<Map<String, String>> messages = [
-    {
-      'sender': 'harin',
-      'text': '안녕하세요, 저는 문학 소녀 하린이에요 🌸\n오늘은 어떤 이야기를 나눠볼까요?',
-    }
+    {'sender': 'harin', 'text': '안녕하세요, 저는 문학 소녀 하린이에요 🌸\n오늘은 어떤 이야기를 나눠볼까요?'},
   ];
 
   String mode = 'default';
@@ -37,10 +37,44 @@ class _HarinChatState extends State<HarinChat> {
     'default': '기본',
   };
 
+  String get _baseUrl =>
+      '${Config.baseUrl}/api/chat/generate'; // API Gateway 엔드포인트 사용
+
   @override
   void initState() {
     super.initState();
     _loadProfile(); // 프로필 로드 함수 호출
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final hist = await chatService.fetchHistory(
+        userId,
+        'harin',
+      ); // ◆ 사용자 아이디, 캐릭터 키는 상황에 맞게 변경
+      final loaded =
+          hist
+              .map(
+                (e) => {
+                  'sender': e['sender'] as String,
+                  'text': e['content'] as String,
+                },
+              )
+              .toList();
+
+      if (loaded.isNotEmpty) {
+        setState(() {
+          // --- 수정 시작: 기존 messages(인사말 등)는 유지하고, 서버 히스토리만 뒤에 붙이기 ---
+          messages.addAll(loaded);
+          // --- 수정 끝 ---
+        });
+        _scrollToBottom();
+      }
+      // loaded가 비어 있으면 아무것도 안 함 → 인사말만 화면에 남음
+    } catch (e) {
+      print('히스토리 로드 에러: $e');
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -48,6 +82,37 @@ class _HarinChatState extends State<HarinChat> {
     setState(() {
       systemPrompt = profile;
     });
+  }
+
+  Future<String> _generateResponse(
+    String input, {
+    String? systemPrompt,
+    String mode = 'chat',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(_baseUrl), // _baseUrl 사용
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': input,
+          'mode': mode,
+          'stream': false,
+          'system': systemPrompt,
+          'character': 'harin',
+          'name': '하린',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['response'];
+      } else {
+        throw Exception('Failed to generate response');
+      }
+    } catch (e) {
+      return '죄송합니다. 오류가 발생했습니다.';
+    }
   }
 
   void _sendMessage() async {
@@ -59,115 +124,21 @@ class _HarinChatState extends State<HarinChat> {
       _isLoading = true;
     });
 
-    try {
-      final String apiUrl = '${Config.baseUrl}/api/chat/generate';
+    await chatService.saveHistory(userId, 'harin', 'user', input);
 
-      // 이전 대화 내용을 포함한 프롬프트 생성
-      String conversationHistory = '';
-      for (var i = 0; i < messages.length - 1; i++) {
-        final message = messages[i];
-        if (message['sender'] == 'user') {
-          conversationHistory += '사용자: ${message['text']}\n';
-        } else {
-          conversationHistory += '하린: ${message['text']}\n';
-        }
-      }
-      conversationHistory += '사용자: $input';
+    final reply = await _generateResponse(
+      input,
+      systemPrompt: systemPrompt,
+      mode: mode == 'book-recommendation' ? 'book' : mode,
+    );
 
-      // 모드에 따라 prefix 추가
-      String promptWithPrefix = conversationHistory;
-      if (mode == 'novel-helper') {
-        promptWithPrefix = '소설 쓰기 도와줘!\n$conversationHistory';
-      } else if (mode == 'literary-analysis') {
-        promptWithPrefix = '문학 분석 도와줘!\n$conversationHistory';
-      } else if (mode == 'poetry-play') {
-        promptWithPrefix = '시 쓰기 놀이를 하자!\n$conversationHistory';
-      }
+    setState(() {
+      messages.add({'sender': 'harin', 'text': reply});
+      _isLoading = false;
+    });
+    _scrollToBottom();
 
-      final request = http.Request('POST', Uri.parse(apiUrl));
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode({
-        'model': 'gemma3:4b',
-        'prompt': promptWithPrefix,
-        'mode': mode == 'book-recommendation' ? 'book' : mode,
-        'stream': mode != 'book-recommendation',
-        'system': systemPrompt,
-        'character': 'harin',
-        'name': '하린'
-      });
-
-      final response = await request.send();
-      
-      if (response.statusCode != 200) {
-        final errorBody = await response.stream.bytesToString();
-        print('Server Error Body: $errorBody'); // 에러 본문 출력
-        throw Exception('서버 오류: ${response.statusCode} - $errorBody');
-      }
-
-      if (mode == 'book-recommendation') {
-        // 독서 추천 결과를 가짜 스트리밍으로 표시 (단일 응답 처리)
-        final responseBody = await response.stream.bytesToString();
-        final data = jsonDecode(responseBody);
-        final responseText = data['response'] as String;
-        final books = responseText.split('\n\n');
-        
-        // 첫 번째 메시지 추가
-        if (books.isNotEmpty) {
-          setState(() {
-            messages.add({'sender': 'harin', 'text': books[0]});
-          });
-          _scrollToBottom();
-        }
-        
-        // 나머지 책들을 순차적으로 표시
-        for (var i = 1; i < books.length; i++) {
-          if (books[i].trim().isEmpty) continue;
-          await Future.delayed(const Duration(milliseconds: 800));
-          setState(() {
-            final currentText = messages.last['text'] ?? '';
-            messages.last['text'] = currentText + '\n\n' + books[i];
-          });
-          _scrollToBottom();
-        }
-      } else {
-        // 일반 채팅은 스트리밍 처리
-        final stream = response.stream
-            .transform(utf8.decoder)
-            .transform(const LineSplitter());
-
-        String fullResponse = '';
-        await for (final line in stream) {
-          if (line.startsWith('data: ')) { 
-            try {
-              final data = jsonDecode(line.substring(6));
-              if (data['response'] != null) {
-                final chunk = data['response'] as String;
-                fullResponse += chunk;
-                setState(() {
-                  if (messages.isNotEmpty && messages.last['sender'] == 'harin') {
-                    messages.last['text'] = fullResponse;
-                  } else {
-                    messages.add({'sender': 'harin', 'text': fullResponse});
-                  }
-                });
-                _scrollToBottom();
-              }
-            } catch (e) {
-              print('Error parsing JSON for streaming: $e - Line: $line');
-            }
-          }
-        }
-      }
-    } catch (e) {
-      print('Error in _sendMessage: $e');
-      setState(() {
-        messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.'});
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    await chatService.saveHistory(userId, 'harin', 'harin', reply);
   }
 
   void _scrollToBottom() {
@@ -181,45 +152,50 @@ class _HarinChatState extends State<HarinChat> {
       }
     });
   }
-  void _changeMode(String newMode) async {
-  setState(() {
-    mode = newMode;
-    messages = [
-      {
-        'sender': 'harin',
-        'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
-      }
-    ];
-    _isLoading = true;
-  });
 
-  String initialPrompt = '';
-  if (newMode == 'novel-helper') {
-    initialPrompt = '소설 작성을 도와줘!';
-  } else if (newMode == 'literary-analysis') {
-    initialPrompt = '문학 분석을 도와줘!';
-  } else if (newMode == 'poetry-play') {
-    initialPrompt = '시 쓰기 놀이를 하자!';
-  } else if (newMode == 'book-recommendation') {
+  void _changeMode(String newMode) async {
     setState(() {
-      messages.add({
-        'sender': 'harin',
-        'text': '어떤 종류의 책을 찾고 계신가요? 제목, 저자, 주제 등 키워드를 입력해주세요!',
+      mode = newMode;
+      messages = [
+        {
+          'sender': 'harin',
+          'text':
+              '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
+        },
+      ];
+      _isLoading = true;
+    });
+
+    String initialPrompt = '';
+    if (newMode == 'novel-helper') {
+      initialPrompt = '소설 작성을 도와줘!';
+    } else if (newMode == 'literary-analysis') {
+      initialPrompt = '문학 분석을 도와줘!';
+    } else if (newMode == 'poetry-play') {
+      initialPrompt = '시 쓰기 놀이를 하자!';
+    } else if (newMode == 'book-recommendation') {
+      setState(() {
+        messages.add({
+          'sender': 'harin',
+          'text': '어떤 종류의 책을 찾고 계신가요? 제목, 저자, 주제 등 키워드를 입력해주세요!',
+        });
+        _isLoading = false;
       });
-      _isLoading = false;
-    });
-    _scrollToBottom();
-    return;
-  } else {
-    initialPrompt = '';
-    setState(() {
-      _isLoading = false;
-    });
-    return;
-  }
+      _scrollToBottom();
+      return;
+    } else {
+      initialPrompt = '';
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
 
     try {
-      final request = http.Request('POST', Uri.parse('${Config.baseUrl}/api/chat/generate-stream'));  // API Gateway URL 사용
+      final request = http.Request(
+        'POST',
+        Uri.parse('${Config.baseUrl}/api/chat/generate-stream'),
+      ); // API Gateway URL 사용
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode({
         'model': 'gemma3:4b',
@@ -228,7 +204,7 @@ class _HarinChatState extends State<HarinChat> {
         'stream': true,
         'system': systemPrompt,
         'character': 'harin',
-        'name': '하린'
+        'name': '하린',
       });
 
       final response = await request.send();
@@ -241,7 +217,7 @@ class _HarinChatState extends State<HarinChat> {
         if (line.startsWith('data: ')) {
           final data = jsonDecode(line.substring(6));
           final chunk = data['response'] as String;
-          
+
           setState(() {
             if (messages.isNotEmpty && messages.last['sender'] == 'harin') {
               messages.last['text'] = fullResponse + chunk;
@@ -275,9 +251,7 @@ class _HarinChatState extends State<HarinChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey),
-                ),
+                border: Border(bottom: BorderSide(color: Colors.grey)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -332,16 +306,23 @@ class _HarinChatState extends State<HarinChat> {
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: messages.length,
                 itemBuilder: (context, idx) {
                   final msg = messages[idx];
                   final isHarin = msg['sender'] == 'harin';
                   return Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    alignment: isHarin ? Alignment.centerLeft : Alignment.centerRight,
+                    alignment:
+                        isHarin ? Alignment.centerLeft : Alignment.centerRight,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: isHarin ? Colors.white : Colors.purple[100],
                         borderRadius: BorderRadius.circular(16),
@@ -366,19 +347,27 @@ class _HarinChatState extends State<HarinChat> {
                 runSpacing: 8,
                 children: [
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('novel-helper'),
+                    onPressed:
+                        _isLoading ? null : () => _changeMode('novel-helper'),
                     child: const Text('📝 소설 작성 도우미'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('literary-analysis'),
+                    onPressed:
+                        _isLoading
+                            ? null
+                            : () => _changeMode('literary-analysis'),
                     child: const Text('📘 문학 분석'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('poetry-play'),
+                    onPressed:
+                        _isLoading ? null : () => _changeMode('poetry-play'),
                     child: const Text('📄 시 쓰기 놀이'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('book-recommendation'),
+                    onPressed:
+                        _isLoading
+                            ? null
+                            : () => _changeMode('book-recommendation'),
                     child: const Text('📚 독서 추천 & 기록'),
                   ),
                 ],
@@ -388,9 +377,7 @@ class _HarinChatState extends State<HarinChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey)),
               ),
               child: Row(
                 children: [
@@ -404,7 +391,10 @@ class _HarinChatState extends State<HarinChat> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(20)),
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ),
@@ -417,7 +407,10 @@ class _HarinChatState extends State<HarinChat> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text('전송'),
                   ),
@@ -435,7 +428,10 @@ class _HarinChatState extends State<HarinChat> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(icon, size: 24, color: Colors.deepPurple),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.deepPurple)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.deepPurple),
+        ),
       ],
     );
   }
