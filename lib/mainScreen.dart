@@ -52,7 +52,7 @@ class _HomePageState extends State<HomePage> {
       "src": "assets/girl4.png",
       "name": "유리",
       "description": "세상을 탐험하는 과학 소녀",
-      "features": ['퀴즈 챌린지', '실험 시뮬레이션', '콰학 뉴스 브리핑', '별자리 관찰 가이드'],
+      "features": ['퀴즈 챌린지', '실험 시뮬레이션', '과학 뉴스 브리핑', '별자리 관찰 가이드'],
     },
   ];
 
@@ -194,10 +194,7 @@ class _HomePageState extends State<HomePage> {
           appBar: AppBar(
             title: const Text("캐릭터 선택"),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: _logout,
-              ),
+              IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
             ],
           ),
           body: Center(
@@ -348,44 +345,47 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
+              ],
+            ),
           ),
         );
       case PageState.chat:
-        if (selectedId == 1) {
-          return HarinChat(
-            goBack: () {
-              setState(() {
-                _page = PageState.select;
-              });
-            },
-          );
-        } else if (selectedId == 2) {
-          return SeraChat(
-            goBack: () {
-              setState(() {
-                _page = PageState.select;
-              });
-            },
-          );
-        } else if (selectedId == 3) {
-          return MinaChat(
-            goBack: () {
-              setState(() {
-                _page = PageState.select;
-              });
-            },
-          );  
-        } else if (selectedId == 4) {
-          return YuriChat(
-            goBack: () {
-              setState(() {
-                _page = PageState.select;
-              });
-            },
-          );
+        switch (selectedId) {
+          case 1:
+            return HarinChat(
+              goBack: () {
+                setState(() {
+                  _page = PageState.select;
+                });
+              },
+            );
+          case 2:
+            return SeraChat(
+              goBack: () {
+                setState(() {
+                  _page = PageState.select;
+                });
+              },
+            );
+          case 3:
+            return MinaChat(
+              goBack: () {
+                setState(() {
+                  _page = PageState.select;
+                });
+              },
+            );
+          case 4:
+            return YuriChat(
+              goBack: () {
+                setState(() {
+                  _page = PageState.select;
+                });
+              },
+            );
+          default:
+            return const Scaffold(body: Center(child: Text("캐릭터를 선택해주세요.")));
         }
-        {}
-        return const Scaffold(body: Center(child: Text("캐릭터를 선택해주세요.")));
     }
   }
 }

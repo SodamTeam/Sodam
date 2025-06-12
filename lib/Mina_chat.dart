@@ -11,7 +11,7 @@ import 'config.dart';
 
 class MinaChat extends StatefulWidget {
   final VoidCallback goBack;
-  const MinaChat({super.key, required this.goBack});
+  const MinaChat({super.key, required this.goBack, Map<String, dynamic>? preferences});
 
   @override
   State<MinaChat> createState() => _MinaChatState();

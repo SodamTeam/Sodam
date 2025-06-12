@@ -45,7 +45,7 @@ async def handle_chat_generate(request: Request):
                     async with httpx.AsyncClient() as client:
                         async with client.stream(
                             'POST',
-                            f"{CHAT_SERVICE_URL}/generate", # chat-service의 올바른 엔드포인트
+                            f"{CHAT_SERVICE_URL}/api/chat/generate", #올바른 엔드포인트
                             json=request_data,
                             timeout=30.0
                         ) as response:
@@ -65,7 +65,7 @@ async def handle_chat_generate(request: Request):
         else:
             # 비스트리밍 요청 처리
             response = await http_client.post(
-                f"{CHAT_SERVICE_URL}/generate", # chat-service의 올바른 엔드포인트
+                f"{CHAT_SERVICE_URL}/api/chat/generate", # chat-service의 올바른 엔드포인트
                 json=request_data
             )
             response.raise_for_status()
@@ -90,17 +90,21 @@ async def create_chat(request: dict):
 @app.get("/api/chat/history/{user_id}/{room}")
 async def get_chat_history(user_id: int, room: str):
     response = await http_client.get(
-        f"{CHAT_HISTORY_SERVICE_URL}/history/{user_id}/{room}"
+        f"{CHAT_HISTORY_SERVICE_URL}/history/{user_id}/{room}",
+        timeout=30.0,
     )
+    response.raise_for_status()
     return response.json()
 
 @app.post("/api/chat/history")
 async def create_chat_history(entry: dict):
     """{ "user_id": int, "sender": "user"|"bot", "content": str } 을 저장"""
-    response = await http_client.post(
+    response = await http_client.post (
         f"{CHAT_HISTORY_SERVICE_URL}/history/",
-        json=entry
+        json=entry,
+        timeout=30.0,
     )
+    response.raise_for_status()
     return JSONResponse(
         status_code=response.status_code,
         content=response.json()
@@ -160,7 +164,7 @@ async def get_profile(character: str):
     try:
         print(f"Profile request for: {character}")  # 디버깅용 로그
         response = await http_client.get(
-            f"{PROFILE_SERVICE_URL}/{character}"  # /api/profile/ 제거
+            f"{PROFILE_SERVICE_URL}/api/profile/{character}"  # /api/profile/ 추가
         )
         print(f"Profile response: {response.status_code} - {response.text}")  # 디버깅용 로그
         return response.json()
