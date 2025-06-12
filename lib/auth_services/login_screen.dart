@@ -31,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = false);
 
     if (msg == null && mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/intermediate'); // ✅ 수정됨
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg!)));
     }

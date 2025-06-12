@@ -1,122 +1,43 @@
-# backend/app/gateway.py
+# backend/gateway/app.py
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 import httpx
-from fastapi.responses import JSONResponse, Response
 
-app = FastAPI(title="SODAM API Gateway")
+app = FastAPI(title="Sodam API Gateway")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# 개발 단계용 CORS 전역 설정
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 각 서비스 베이스 URL (Docker Compose 등에서 서비스 이름으로 호출 가능)
-SERVICE_URLS = {
-    "chat":   "http://localhost:8001",
-    "profile":"http://localhost:8002",
-    "auth":   "http://localhost:8003",
-    "image":  "http://localhost:8004",
-    "music":  "http://localhost:8005",
-    "diary":  "http://localhost:8006",
-}
+DIARY_SERVICE_URL = "http://localhost:8005"
 
 async def proxy_request(method: str, url: str, **kwargs):
     async with httpx.AsyncClient() as client:
         resp = await client.request(method, url, **kwargs)
         if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
-        # 응답을 그대로 전달 (이게 가장 안전)
-        return Response(
-            content=resp.content,
-            status_code=resp.status_code,
-            media_type=resp.headers.get("content-type")
-        )
+            raise HTTPException(resp.status_code, resp.text)
+        return Response(content=resp.content, status_code=resp.status_code, media_type=resp.headers.get("content-type"))
 
-# 1) 로그인 요청 → Auth Service
-@app.post("/api/auth/login")
-async def login(request: Request):
-    body = await request.json()
-    return await proxy_request(
-        "POST",
-        f"{SERVICE_URLS['auth']}/login",
-        json=body,
-    )
+@app.post("/api/diary/upload-image/")
+async def proxy_upload(request: Request):
+    # file 업로드는 multipart 여서, Flutter 쪽 그대로 Gateway→Service로 전송하도록 구현 필요
+    return await proxy_request("POST", f"{DIARY_SERVICE_URL}/api/diary/upload-image/", data=await request.body(), headers=request.headers)
 
-# 2) 캐릭터 선택 → Profile Service
-@app.post("/api/profile/select")
-async def select_profile(request: Request):
-    token = request.headers.get("authorization")
-    body = await request.json()
-    return await proxy_request(
-        "POST",
-        f"{SERVICE_URLS['profile']}/select",
-        headers={"Authorization": token} if token else {},
-        json=body,
-    )
+@app.post("/api/diary/")
+async def proxy_create(request: Request):
+    return await proxy_request("POST", f"{DIARY_SERVICE_URL}/api/diary/", json=await request.json())
 
-# 3) 채팅 메시지 생성 → Chat Service
-@app.post("/api/chat/generate")
-async def chat_generate(request: Request):
-    token = request.headers.get("authorization")
-    body = await request.json()
-    return await proxy_request(
-        "POST",
-        f"{SERVICE_URLS['chat']}/api/generate",
-        headers={"Authorization": token} if token else {},
-        json=body,
-    )
+@app.get("/api/diary/")
+async def proxy_list():
+    return await proxy_request("GET", f"{DIARY_SERVICE_URL}/api/diary/")
 
-# 4) 이미지 생성 → Image Gen Service
-@app.post("/api/image/generate")
-async def image_generate(request: Request):
-    token = request.headers.get("authorization")
-    body = await request.json()
-    return await proxy_request(
-        "POST",
-        f"{SERVICE_URLS['image']}/api/generate",
-        headers={"Authorization": token} if token else {},
-        json=body,
-    )
+@app.put("/api/diary/{id}")
+async def proxy_update(id: int, request: Request):
+    return await proxy_request("PUT", f"{DIARY_SERVICE_URL}/api/diary/{id}", json=await request.json())
 
-# 5) 음악 생성 → Music Gen Service
-@app.post("/api/music/generate")
-async def music_generate(request: Request):
-    token = request.headers.get("authorization")
-    body = await request.json()
-    return await proxy_request(
-        "POST",
-        f"{SERVICE_URLS['music']}/api/generate",
-        headers={"Authorization": token} if token else {},
-        json=body,
-    )
+@app.delete("/api/diary/{id}")
+async def proxy_delete(id: int):
+    return await proxy_request("DELETE", f"{DIARY_SERVICE_URL}/api/diary/{id}")
 
-# 6) 감정 일기 작성 → Diary Service
-@app.post("/api/diary/write")
-async def diary_write(request: Request):
-    token = request.headers.get("authorization")
-    body = await request.json()
-    return await proxy_request(
-        "POST",
-        f"{SERVICE_URLS['diary']}/write",
-        headers={"Authorization": token} if token else {},
-        json=body,
-    )
-
-# 감정 일기 조회
-@app.get("/api/diary/list")
-async def diary_list(request: Request):
-    token = request.headers.get("authorization")
-    return await proxy_request(
-        "GET",
-        f"{SERVICE_URLS['diary']}/list",
-        headers={"Authorization": token} if token else {},
-    )
-
-# 헬스체크
 @app.get("/health")
 async def health():
     return {"status": "gateway OK"}

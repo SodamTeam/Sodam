@@ -12,7 +12,7 @@ import 'config.dart';
 
 class YuriChat extends StatefulWidget {
   final VoidCallback goBack;
-  const YuriChat({super.key, required this.goBack});
+  const YuriChat({super.key, required this.goBack, Map<String, dynamic>? preferences});
 
   @override
   State<YuriChat> createState() => _YuriChatState();
@@ -49,34 +49,24 @@ class _YuriChatState extends State<YuriChat> {
   @override
   void initState() {
     super.initState();
-    _loadProfile(); // 프로필 로드 함수 호출
+    _loadProfile();
     _loadHistory();
   }
 
   Future<void> _loadHistory() async {
     try {
       final hist = await chatService.fetchHistory(userId, 'yuri');
-      // 서버 히스토리를 Map 형태로 변환
-      final List<Map<String, String>> loaded =
-          hist
-              .map(
-                (e) => {
-                  'sender': e['sender'] as String,
-                  'text': e['content'] as String,
-                },
-              )
-              .toList();
+      final loaded = hist.map((e) => {
+        'sender': e['sender'] as String,
+        'text': e['content'] as String,
+      }).toList();
 
-      setState(() {
-        // 항상 인사말을 첫 번째로 두고, 그 뒤에 서버 히스토리를 붙인다
-        messages = [
-          {
-            'sender': 'yuri',
-            'text': '안녕하세요! 저는 과학 소녀 유리예요 🔬\n어떤 과학 현상에 대해 이야기해볼까요?',
-          },
-          ...loaded,
-        ];
-      });
+      if (loaded.isNotEmpty) {
+        setState(() {
+          messages.addAll(loaded);
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
       print('히스토리 로드 에러: $e');
     }
@@ -123,70 +113,78 @@ class _YuriChatState extends State<YuriChat> {
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
-
-    // ◆ 사용자 메시지 삽입 ◆
     setState(() {
       messages.add({'sender': 'user', 'text': input});
       _controller.clear();
       _isLoading = true;
     });
-    _scrollToBottom();
 
     await chatService.saveHistory(userId, 'yuri', 'user', input);
 
-    try {
-      final String apiUrl = _baseUrl;
+    // 이전 대화 내용을 포함한 프롬프트 생성
+    String conversationHistory = '';
+    for (var i = 0; i < messages.length - 1; i++) {
+      final message = messages[i];
+      if (message['sender'] == 'user') {
+        conversationHistory += '사용자: ${message['text']}\n';
+      } else {
+        conversationHistory += '유리: ${message['text']}\n';
+      }
+    }
+    conversationHistory += '사용자: $input';
 
-      // 이전 대화 내용을 포함한 프롬프트 생성
-      String conversationHistory = '';
-      for (var i = 0; i < messages.length - 1; i++) {
-        final message = messages[i];
-        if (message['sender'] == 'user') {
-          conversationHistory += '사용자: ${message['text']}\n';
-        } else {
-          conversationHistory += '유리: ${message['text']}\n';
+    // 모드에 따라 prefix 추가
+    String promptWithPrefix = conversationHistory;
+    if (mode == 'book-recommendation') {
+      promptWithPrefix = '책을 추천해줘!\n$conversationHistory';
+    } else if (mode == 'reading-companion') {
+      promptWithPrefix = '독서를 도와줘!\n$conversationHistory';
+    } else if (mode == 'literary-discussion') {
+      promptWithPrefix = '문학 토론을 해보자!\n$conversationHistory';
+    } else if (mode == 'writing-assistant') {
+      promptWithPrefix = '글쓰기를 도와줘!\n$conversationHistory';
+    }
+
+    try {
+      final request = http.Request('POST', Uri.parse(_baseUrl));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': promptWithPrefix,
+        'mode': mode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'yuri',
+        'name': '유리',
+      });
+
+      final response = await request.send();
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      String fullResponse = '';
+      await for (final line in stream) {
+        if (line.startsWith('data: ')) {
+          final data = jsonDecode(line.substring(6));
+          final chunk = data['response'] as String;
+
+          setState(() {
+            if (messages.isNotEmpty && messages.last['sender'] == 'yuri') {
+              messages.last['text'] = fullResponse + chunk;
+            } else {
+              messages.add({'sender': 'yuri', 'text': chunk});
+            }
+            fullResponse += chunk;
+          });
+          _scrollToBottom();
         }
       }
-      conversationHistory += '사용자: $input';
-
-      // 모드에 따라 prefix 추가
-      String promptWithPrefix = conversationHistory;
-      if (mode == 'science-explainer') {
-        promptWithPrefix = '과학 현상을 설명해줘!\n$conversationHistory';
-      } else if (mode == 'experiment-helper') {
-        promptWithPrefix = '실험을 도와줘!\n$conversationHistory';
-      } else if (mode == 'nature-explorer') {
-        promptWithPrefix = '자연 현상을 탐험해보자!\n$conversationHistory';
-      } else if (mode == 'science-news') {
-        promptWithPrefix = '최신 과학 뉴스를 알려줘!\n$conversationHistory';
-      }
-
-      final resp = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'model': 'gemma3:4b',
-          'prompt': promptWithPrefix,
-          'mode': mode,
-          'stream': false, // 수정: 반드시 false
-          'system': systemPrompt,
-          'character': 'yuri',
-          'name': '유리',
-        }),
-      );
-
-      if (resp.statusCode != 200) {
-        throw Exception('서버 오류 ${resp.statusCode}: ${resp.body}');
-      }
-
-      final data = jsonDecode(resp.body);
-      final String reply = data['response'] as String; // 수정: 전체 응답 한 번에 추출
-
       setState(() {
-        messages.add({'sender': 'yuri', 'text': reply}); // 수정: 한 번에 추가
+        _isLoading = false;
       });
-      await chatService.saveHistory(userId, 'yuri', 'yuri', reply);
-      _scrollToBottom();
+      // 스트리밍이 완료된 후 응답 저장
+      await chatService.saveHistory(userId, 'yuri', 'yuri', fullResponse);
     } catch (e) {
       print('Error in _sendMessage: $e');
       setState(() {
