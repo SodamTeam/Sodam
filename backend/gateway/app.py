@@ -22,6 +22,8 @@ app.add_middleware(
 CHAT_SERVICE_URL = "http://localhost:8001"  # chat-service
 AUTH_SERVICE_URL = "http://localhost:8002"  # auth-service
 PROFILE_SERVICE_URL = "http://localhost:8003"  # profile-service
+CHAT_HISTORY_SERVICE_URL = "http://localhost:8004" 
+
 
 # HTTP 클라이언트 설정
 http_client = httpx.AsyncClient(timeout=30.0)
@@ -52,15 +54,25 @@ async def create_chat(request: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/chat/history/{user_id}")
-async def get_chat_history(user_id: int):
-    try:
-        response = await http_client.get(
-            f"{CHAT_SERVICE_URL}/chat/history/{user_id}"
-        )
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/api/chat/history/{user_id}/{room}")
+async def get_chat_history(user_id: int, room: str):
+    response = await http_client.get(
+        f"{CHAT_HISTORY_SERVICE_URL}/history/{user_id}/{room}"
+    )
+    return response.json()
+
+@app.post("/api/chat/history")
+async def create_chat_history(entry: dict):
+    """{ "user_id": int, "sender": "user"|"bot", "content": str } 을 저장"""
+    response = await http_client.post(
+        f"{CHAT_HISTORY_SERVICE_URL}/history/",
+        json=entry
+    )
+    return JSONResponse(
+        status_code=response.status_code,
+        content=response.json()
+    )
+
 
 # 인증 서비스 라우팅
 @app.post("/api/auth/login")
