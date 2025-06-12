@@ -68,6 +68,7 @@ class _HomePageState extends State<HomePage> {
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
+                fontFamily: 'Pretendard',
               ),
             ),
             backgroundColor: Colors.white,
@@ -80,13 +81,13 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           body: Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.white,
-                  Colors.blue.shade50,
+                  Color(0xFFF3E8FF), // soft lavender
+                  Color(0xFFFFFBF0), // warm ivory
                 ],
               ),
             ),
@@ -101,7 +102,7 @@ class _HomePageState extends State<HomePage> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
+                          color: const Color(0xFF5B4B8A).withOpacity(0.15),
                           blurRadius: 20,
                           spreadRadius: 5,
                         ),
@@ -116,42 +117,39 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 30),
                   const Text(
-                    "안녕하세요!",
+                    "소담에 오신 걸 환영해요 🌸",
                     style: TextStyle(
                       fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF5B4B8A),
+                      fontFamily: 'Pretendard',
                     ),
                   ),
                   const SizedBox(height: 16),
                   const Text(
                     "맞춤형 챗봇을 선택해봐!",
                     style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.black54,
+                      fontSize: 18,
+                      color: Color(0xFF8F7BA3),
+                      fontFamily: 'Pretendard',
                     ),
                   ),
                   const SizedBox(height: 10),
                   const Text(
                     "일상에 스며드는 AI 친구, 소담",
                     style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black45,
+                      fontSize: 15,
+                      color: Color(0xFFB8AFC9),
+                      fontFamily: 'Pretendard',
                     ),
                   ),
                   const SizedBox(height: 40),
                   Container(
-                    width: 200,
-                    height: 50,
+                    width: 220,
+                    height: 48,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(24),
+                      color: const Color(0xFFFCEEF3),
                     ),
                     child: ElevatedButton(
                       onPressed: () {
@@ -160,19 +158,28 @@ class _HomePageState extends State<HomePage> {
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: const Color(0xFF5B4B8A),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
+                          borderRadius: BorderRadius.circular(24),
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        "AI 챗봇 선택",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.favorite_outline),
+                          SizedBox(width: 8),
+                          Text(
+                            "소담 친구 만나기",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Pretendard',
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
