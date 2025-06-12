@@ -19,6 +19,7 @@ enum PageState { intro, select, chat }
 class _HomePageState extends State<HomePage> {
   PageState _page = PageState.intro;
   int selectedId = 1;
+  bool isSelected = false;
 
   Future<void> _logout() async {
     await AuthService.logout();
@@ -222,167 +223,134 @@ class _HomePageState extends State<HomePage> {
                   ),
                   itemBuilder: (context, index, realIndex) {
                     final slide = slides[index];
-                    return Container(
-                      width: MediaQuery.of(context).size.width,
-                      margin: const EdgeInsets.symmetric(horizontal: 5.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        image: DecorationImage(
-                          image: AssetImage(slide["src"]),
-                          fit: BoxFit.cover,
-                          colorFilter:
-                              isSelected
+                    isSelected = selectedId == slide["id"];
+                    return Stack(
+                      children: [
+                        Container(
+                          width: MediaQuery.of(context).size.width,
+                          margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            image: DecorationImage(
+                              image: AssetImage(slide["src"]),
+                              fit: BoxFit.cover,
+                              colorFilter: isSelected
                                   ? ColorFilter.mode(
-                                    Colors.black.withOpacity(0.5),
-                                    BlendMode.darken,
-                                  )
+                                      Colors.black.withOpacity(0.5),
+                                      BlendMode.darken,
+                                    )
                                   : null,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    if (isSelected)
-                      Positioned.fill(
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                        if (isSelected)
+                          Positioned.fill(
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      "📖 ${slide["name"]} - ${slide["description"]}",
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          "📖 ${slide["name"]} - ${slide["description"]}",
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                        ),
+                                        onPressed: () => setState(() {
+                                          selectedId = 0;
+                                          isSelected = false;
+                                        }),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  ...List.generate(slide["features"].length, (i) {
+                                    return Text(
+                                      "• ${slide["features"][i]}",
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
                                       ),
+                                    );
+                                  }),
+                                  const SizedBox(height: 10),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _page = PageState.chat;
+                                        selectedId = slide["id"];
+                                      });
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: Colors.black,
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                    ),
-                                    onPressed:
-                                        () => setState(() => selectedId = null),
+                                    child: Text("${slide["name"]}와 채팅 시작하기"),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 10),
-                              ...List.generate(slide["features"].length, (i) {
-                                return Text(
-                                  "• ${slide["features"][i]}",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                  ),
-                                );
-                              }),
-                              const SizedBox(height: 10),
-                              if (slide["id"] == 1)
-                                ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _page = PageState.chat;
-                                      selectedId = 1;
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                  ),
-                                  child: const Text("하린과 채팅 시작하기"),
-                                ),
-                              if (slide["id"] == 2)
-                                ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _page = PageState.chat;
-                                      selectedId = 2;
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                  ),
-                                  child: const Text("세라와 채팅 시작하기"),
-                                  ),
-                                  if (selectedId == 3)
-                          ElevatedButton(
-                            onPressed: () {
-                            setState(() {
-                              _page = PageState.chat;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
+                            ),
                           ),
-                          child: const Text("미나와 채팅 시작하기"),
-                          ),
-                              if (slide["id"] == 4)
-                                ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _page = PageState.chat;
-                                      selectedId = 4;
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                  ),
-                                  child: const Text("유리와 채팅 시작하기"),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
-              );
-            },
+              ],
+            ),
           ),
         );
 
       case PageState.chat:
-        if (selectedId == 1) {
-          return HarinChat(
-            goBack: () {
-              setState(() {
-                _page = PageState.select;
-              });
-            },
-          );
-        } else if (selectedId == 2) {
-          return SeraChat(
-            goBack: () {
-              setState(() {
-                _page = PageState.select;
-              });
-            },
-          );
-        } else if (selectedId == 3) {
-          return MinaChat(
-            goBack: () {
-              setState(() {
-                _page = PageState.select;
-              });
-            },
-          );  
-        } else if (selectedId == 4) {
-          return YuriChat(
-            goBack: () {
-              setState(() {
-                _page = PageState.select;
-              });
-            },
-          );
+        switch (selectedId) {
+          case 1:
+            return HarinChat(
+              goBack: () {
+                setState(() {
+                  _page = PageState.select;
+                });
+              },
+            );
+          case 2:
+            return SeraChat(
+              goBack: () {
+                setState(() {
+                  _page = PageState.select;
+                });
+              },
+            );
+          case 3:
+            return MinaChat(
+              goBack: () {
+                setState(() {
+                  _page = PageState.select;
+                });
+              },
+            );
+          case 4:
+            return YuriChat(
+              goBack: () {
+                setState(() {
+                  _page = PageState.select;
+                });
+              },
+            );
+          default:
+            return const Scaffold(
+              body: Center(child: Text("캐릭터를 선택해주세요.")),
+            );
         }
-        {}
-        return const Scaffold(body: Center(child: Text("캐릭터를 선택해주세요.")));
     }
   }
 }

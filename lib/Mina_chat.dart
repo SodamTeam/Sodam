@@ -17,6 +17,7 @@ class _MinaChatState extends State<MinaChat> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ChatService chatService = ChatService();
+  String systemPrompt = '';
 
   List<Map<String, String>> messages = [
     {
@@ -26,7 +27,19 @@ class _MinaChatState extends State<MinaChat> {
   ];
 
   bool _isLoading = false;
-  final String systemPrompt = ProfileService.getProfile('mina');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await ProfileService.getProfile('mina');
+    setState(() {
+      systemPrompt = profile;
+    });
+  }
 
   void _sendMessage(String input) async {
     if (input.trim().isEmpty || _isLoading) return;
