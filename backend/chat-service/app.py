@@ -10,7 +10,6 @@ import schemas
 import database
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 import json
 
 app = FastAPI(title="Sodam Chat Service")
@@ -58,9 +57,9 @@ class ChatResponse(BaseModel):
     response: str
 
 @app.post("/generate", response_model=GenerateResponse)
-async def generate(req: GenerateRequest, current_user: dict = Depends, db: Session = Depends(get_db)):
+async def generate(req: GenerateRequest):
     try:
-        print(f"Generate request received by user {current_user['id']}: {req}")  # 요청 로깅
+        print(f"Generate request received: {req}")  # 요청 로깅
         
         # 프로필 서비스에서 캐릭터 정보 가져오기
         if req.character:
@@ -115,68 +114,28 @@ async def generate(req: GenerateRequest, current_user: dict = Depends, db: Sessi
         payload: dict = {
             "model": req.model,
             "prompt": req.prompt or "기본 프롬프트",
-            "stream": req.stream,
+            "stream": False,
         }
         if req.system:
             payload["system"] = req.system
 
-        if req.stream:
-            async def stream_ollama_response():
-                print(f"Sending streaming request to Ollama: {payload}")  # Ollama 스트리밍 요청 로깅
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    async with client.stream('POST', OLLAMA_API_URL, json=payload) as response:
-                        print(f"Ollama streaming response status: {response.status_code}")  # Ollama 스트리밍 응답 상태 로깅
+        print(f"Sending non-streaming request to Ollama: {payload}")  # Ollama 일반 요청 로깅
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(OLLAMA_API_URL, json=payload)
+            print(f"Ollama response status: {resp.status_code}")  # Ollama 응답 상태 로깅
+            print(f"Ollama response: {resp.text}")  # Ollama 응답 내용 로깅
+            resp.raise_for_status()
+            data = resp.json()
 
-                        full_response=""
-
-                        async for line in response.aiter_lines():
-                            if line:
-                                print(f"Ollama chunk: {line}")  # Ollama 응답 청크 로깅
-                                try:
-                                    data = json.loads(line)
-                                    chunk = data.get("response", "")
-                                    full_response += chunk
-                                    yield f"data: {json.dumps({'response': chunk})}\n\n"
-                                except json.JSONDecodeError:
-                                    print(f"JSON Decode Error for line: {line}")
-                                    continue
-
-                        db_chat = models.Chat(
-                            user_id=current_user["id"],
-                            room=req.room,
-                            message=req.prompt or "",
-                            response=full_response
-                        )
-                        db.add(db_chat)                    # 수정: 세션에 추가
-                        db.commit()  
-
-            return StreamingResponse(stream_ollama_response(), media_type="text/event-stream")
-        else:
-            print(f"Sending non-streaming request to Ollama: {payload}")  # Ollama 일반 요청 로깅
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(OLLAMA_API_URL, json=payload)
-                print(f"Ollama response status: {resp.status_code}")  # Ollama 응답 상태 로깅
-                print(f"Ollama response: {resp.text}")  # Ollama 응답 내용 로깅
-                resp.raise_for_status()
-                data = resp.json()
-
-            result = data.get("response")
-            if not result:
-                raise HTTPException(status_code=500, detail="LLM 응답이 비어 있어요.")
-            
-            db_chat = models.Chat(
-                user_id=current_user["id"],
-                room=req.room,
-                message=req.prompt or "",
-                response=result
-            )
-            db.add(db_chat)                                # 수정: 세션에 추가
-            db.commit() 
-
-            return schemas.GenerateResponse(response=result)
+        result = data.get("response")
+        if not result:
+            raise HTTPException(status_code=500, detail="LLM 응답이 비어 있어요.")
+        
+        return GenerateResponse(response=result)
 
     except Exception as e:
-        print(f"Error in generate: {str(e)}")  # 오류 로깅
+        print(f"Error in generate: {e}")  # 오류 로깅
         raise HTTPException(status_code=500, detail=f"서버 오류: {e}")
 
 @app.post("/chat", response_model=schemas.ChatResponse)

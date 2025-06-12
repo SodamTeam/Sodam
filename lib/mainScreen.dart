@@ -52,7 +52,7 @@ class _HomePageState extends State<HomePage> {
       "src": "assets/girl4.png",
       "name": "유리",
       "description": "세상을 탐험하는 과학 소녀",
-      "features": ['퀴즈 챌린지', '실험 시뮬레이션', '콰학 뉴스 브리핑', '별자리 관찰 가이드'],
+      "features": ['퀴즈 챌린지', '실험 시뮬레이션', '과학 뉴스 브리핑', '별자리 관찰 가이드'],
     },
   ];
 
@@ -84,10 +84,7 @@ class _HomePageState extends State<HomePage> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.white,
-                  Colors.blue.shade50,
-                ],
+                colors: [Colors.white, Colors.blue.shade50],
               ),
             ),
             child: Center(
@@ -126,18 +123,12 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 16),
                   const Text(
                     "맞춤형 챗봇을 선택해봐!",
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.black54,
-                    ),
+                    style: TextStyle(fontSize: 20, color: Colors.black54),
                   ),
                   const SizedBox(height: 10),
                   const Text(
                     "일상에 스며드는 AI 친구, 소담",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black45,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.black45),
                   ),
                   const SizedBox(height: 40),
                   Container(
@@ -187,10 +178,7 @@ class _HomePageState extends State<HomePage> {
           appBar: AppBar(
             title: const Text("캐릭터 선택"),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: _logout,
-              ),
+              IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
             ],
           ),
           body: Center(
@@ -257,14 +245,15 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                             const SizedBox(height: 10),
-                            ...List.generate(slides[selectedId - 1]["features"].length, (i) {
-                              return Text(
-                                "• ${slides[selectedId - 1]["features"][i]}",
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
-                              );
-                            }),
+                            ...List.generate(
+                              slides[selectedId - 1]["features"].length,
+                              (i) {
+                                return Text(
+                                  "• ${slides[selectedId - 1]["features"][i]}",
+                                  style: const TextStyle(fontSize: 14),
+                                );
+                              },
+                            ),
                           ],
                         ),
                       ),

@@ -161,53 +161,6 @@ class _YuriChatState extends State<YuriChat> {
       } else if (mode == 'science-news') {
         promptWithPrefix = '최신 과학 뉴스를 알려줘!\n$conversationHistory';
       }
-
-      final request = http.Request('POST', Uri.parse(apiUrl));
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode({
-        'model': 'gemma3:4b',
-        'prompt': promptWithPrefix,
-        'mode': mode,
-        'stream': true,
-        'system': systemPrompt,
-        'character': 'yuri',
-        'name': '유리',
-      });
-
-      final response = await request.send();
-
-      if (response.statusCode != 200) {
-        final errorBody = await response.stream.bytesToString();
-        print('Server Error Body: $errorBody');
-        throw Exception('서버 오류: ${response.statusCode} - $errorBody');
-      }
-
-      final stream = response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter());
-
-      String fullResponse = '';
-      await for (final line in stream) {
-        if (line.startsWith('data: ')) {
-          try {
-            final data = jsonDecode(line.substring(6));
-            if (data['response'] != null) {
-              final chunk = data['response'] as String;
-              fullResponse += chunk;
-              setState(() {
-                if (messages.isNotEmpty && messages.last['sender'] == 'yuri') {
-                  messages.last['text'] = fullResponse;
-                } else {
-                  messages.add({'sender': 'yuri', 'text': fullResponse});
-                }
-              });
-              _scrollToBottom();
-            }
-          } catch (e) {
-            print('Error parsing JSON for streaming: $e - Line: $line');
-          }
-        }
-      }
     } catch (e) {
       print('Error in _sendMessage: $e');
       setState(() {
