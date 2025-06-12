@@ -160,7 +160,7 @@ async def get_profile(character: str):
     try:
         print(f"Profile request for: {character}")  # 디버깅용 로그
         response = await http_client.get(
-            f"{PROFILE_SERVICE_URL}/{character}"  # /api/profile/ 제거
+            f"{PROFILE_SERVICE_URL}/api/profile/{character}"  # /api/profile/ 추가
         )
         print(f"Profile response: {response.status_code} - {response.text}")  # 디버깅용 로그
         return response.json()

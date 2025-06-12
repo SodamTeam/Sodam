@@ -74,14 +74,14 @@ def init_db():
 # 서버 시작 시 초기 데이터 생성
 init_db()
 
-@app.get("/{username}", response_model=schemas.Profile)
+@app.get("/api/profile/{username}", response_model=schemas.Profile)
 def get_profile(username: str, db: Session = Depends(get_db)):
     profile = db.query(models.Profile).filter(models.Profile.username == username).first()
     if profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")
     return profile
 
-@app.post("/{username}", response_model=schemas.Profile)
+@app.post("/api/profile/{username}", response_model=schemas.Profile)
 def create_profile(username: str, profile: schemas.ProfileCreate, db: Session = Depends(get_db)):
     db_profile = models.Profile(**profile.dict())
     db.add(db_profile)
@@ -89,7 +89,7 @@ def create_profile(username: str, profile: schemas.ProfileCreate, db: Session = 
     db.refresh(db_profile)
     return db_profile
 
-@app.put("/{username}", response_model=schemas.Profile)
+@app.put("/api/profile/{username}", response_model=schemas.Profile)
 def update_profile(username: str, profile: schemas.ProfileCreate, db: Session = Depends(get_db)):
     db_profile = db.query(models.Profile).filter(models.Profile.username == username).first()
     if db_profile is None:
