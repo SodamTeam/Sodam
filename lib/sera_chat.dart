@@ -9,10 +9,10 @@ import 'profile_service.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'config.dart';
+import 'chat_service.dart';
 
 class SeraChat extends StatefulWidget {
   final VoidCallback goBack;
-
   const SeraChat({super.key, required this.goBack});
 
   @override
@@ -96,6 +96,7 @@ class _SeraChatState extends State<SeraChat> {
   }) async {
     try {
       final response = await http.post(
+        Uri.parse(_baseUrl),
         Uri.parse(_baseUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({

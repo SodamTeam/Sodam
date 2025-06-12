@@ -91,6 +91,7 @@ flutter:
     - assets/introback.png
     - assets/introicon.png
     - assets/sodam_icon.png
+    - assets/sera_chat.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

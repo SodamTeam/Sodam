@@ -123,7 +123,10 @@ async def login(request: Request):
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         print(f"Login response: {response.status_code} - {response.text}")  # 디버깅용 로그
-        return response.json()
+        return JSONResponse(
+            status_code=response.status_code,
+            content=response.json()
+        )
     except Exception as e:
         print(f"Login error: {str(e)}")  # 디버깅용 로그
         raise HTTPException(status_code=500, detail=str(e))
@@ -161,7 +164,7 @@ async def get_profile(character: str):
     try:
         print(f"Profile request for: {character}")  # 디버깅용 로그
         response = await http_client.get(
-            f"{PROFILE_SERVICE_URL}/{character}"  # /api/profile/ 제거
+            f"{PROFILE_SERVICE_URL}/api/profile/{character}"  # /api/profile/ 추가
         )
         print(f"Profile response: {response.status_code} - {response.text}")  # 디버깅용 로그
         return response.json()
