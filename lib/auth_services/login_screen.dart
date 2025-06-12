@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     print(msg);
     if (msg == null && mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/intermediate'); // ✅ 수정됨
     } else if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(msg!)));
@@ -96,8 +96,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: _loading
                     ? const CircularProgressIndicator(strokeWidth: 2)
-                    : const Text('로그인',
-                        style: TextStyle(color: Colors.white)),
+                    : const Text(
+                        '로그인',
+                        style: TextStyle(color: Colors.white),
+                      ),
               ),
             ),
           ],
