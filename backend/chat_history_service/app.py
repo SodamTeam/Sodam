@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
-from . import models, schemas, database
+import models
+import schemas
+import database
 
-models.Base.metadata.create_all(bind=database.engine)
+database.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="Chat History Service")
 

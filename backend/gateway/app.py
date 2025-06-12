@@ -90,17 +90,21 @@ async def create_chat(request: dict):
 @app.get("/api/chat/history/{user_id}/{room}")
 async def get_chat_history(user_id: int, room: str):
     response = await http_client.get(
-        f"{CHAT_HISTORY_SERVICE_URL}/history/{user_id}/{room}"
+        f"{CHAT_HISTORY_SERVICE_URL}/history/{user_id}/{room}",
+        timeout=30.0,
     )
+    response.raise_for_status()
     return response.json()
 
 @app.post("/api/chat/history")
 async def create_chat_history(entry: dict):
     """{ "user_id": int, "sender": "user"|"bot", "content": str } 을 저장"""
-    response = await http_client.post(
+    response = await http_client.post (
         f"{CHAT_HISTORY_SERVICE_URL}/history/",
-        json=entry
+        json=entry,
+        timeout=30.0,
     )
+    response.raise_for_status()
     return JSONResponse(
         status_code=response.status_code,
         content=response.json()
@@ -127,12 +131,12 @@ async def login(request: Request):
 @app.post("/api/auth/signup")
 async def signup(request: Request):
     try:
-        form_data = await request.form()
-        print(f"Signup request data: {dict(form_data)}")  # 디버깅용 로그
+        request_data = await request.json()
+        print(f"Signup request data: {request_data}")  # 디버깅용 로그
         response = await http_client.post(
             f"{AUTH_SERVICE_URL}/signup",
-            data=dict(form_data),
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
+            json=request_data,
+            headers={"Content-Type": "application/json"}
         )
         print(f"Signup response: {response.status_code} - {response.text}")  # 디버깅용 로그
         return response.json()

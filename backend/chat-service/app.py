@@ -58,9 +58,9 @@ class ChatResponse(BaseModel):
     response: str
 
 @app.post("/generate", response_model=GenerateResponse)
-async def generate(req: GenerateRequest):
+async def generate(req: GenerateRequest, current_user: dict = Depends, db: Session = Depends(get_db)):
     try:
-        print(f"Generate request received: {req}")  # 요청 로깅
+        print(f"Generate request received by user {current_user['id']}: {req}")  # 요청 로깅
         
         # 프로필 서비스에서 캐릭터 정보 가져오기
         if req.character:
@@ -126,15 +126,30 @@ async def generate(req: GenerateRequest):
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     async with client.stream('POST', OLLAMA_API_URL, json=payload) as response:
                         print(f"Ollama streaming response status: {response.status_code}")  # Ollama 스트리밍 응답 상태 로깅
+
+                        full_response=""
+
                         async for line in response.aiter_lines():
                             if line:
                                 print(f"Ollama chunk: {line}")  # Ollama 응답 청크 로깅
                                 try:
                                     data = json.loads(line)
-                                    yield f"data: {json.dumps({'response': data.get('response', '')})}\n\n"
+                                    chunk = data.get("response", "")
+                                    full_response += chunk
+                                    yield f"data: {json.dumps({'response': chunk})}\n\n"
                                 except json.JSONDecodeError:
                                     print(f"JSON Decode Error for line: {line}")
                                     continue
+
+                        db_chat = models.Chat(
+                            user_id=current_user["id"],
+                            room=req.room,
+                            message=req.prompt or "",
+                            response=full_response
+                        )
+                        db.add(db_chat)                    # 수정: 세션에 추가
+                        db.commit()  
+
             return StreamingResponse(stream_ollama_response(), media_type="text/event-stream")
         else:
             print(f"Sending non-streaming request to Ollama: {payload}")  # Ollama 일반 요청 로깅
@@ -148,7 +163,17 @@ async def generate(req: GenerateRequest):
             result = data.get("response")
             if not result:
                 raise HTTPException(status_code=500, detail="LLM 응답이 비어 있어요.")
-            return GenerateResponse(response=result)
+            
+            db_chat = models.Chat(
+                user_id=current_user["id"],
+                room=req.room,
+                message=req.prompt or "",
+                response=result
+            )
+            db.add(db_chat)                                # 수정: 세션에 추가
+            db.commit() 
+
+            return schemas.GenerateResponse(response=result)
 
     except Exception as e:
         print(f"Error in generate: {str(e)}")  # 오류 로깅

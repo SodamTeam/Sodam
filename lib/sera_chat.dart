@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'config.dart';
+import 'chat_service.dart';
 
 class SeraChat extends StatefulWidget {
   final VoidCallback goBack;
@@ -23,15 +24,12 @@ class _SeraChatState extends State<SeraChat> {
   final ScrollController _scrollController = ScrollController();
 
   List<Map<String, String>> messages = [
-    {
-      'sender': 'sera',
-      'text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?',
-    }
+    {'sender': 'sera', 'text': '안녕하세요! 저는 테크 소녀 세라예요 💻\n어떤 기술에 대해 이야기해볼까요?'},
   ];
 
   String mode = 'default';
   bool _isLoading = false;
-  String systemPrompt = '';  // 초기값을 빈 문자열로 설정
+  String systemPrompt = ''; // 초기값을 빈 문자열로 설정
 
   final Map<String, String> modeLabels = {
     'coding-helper': '코딩 도우미',
@@ -46,7 +44,7 @@ class _SeraChatState extends State<SeraChat> {
   @override
   void initState() {
     super.initState();
-    _loadProfile();  // 프로필 로드 함수 호출
+    _loadProfile(); // 프로필 로드 함수 호출
   }
 
   Future<void> _loadProfile() async {
@@ -56,7 +54,11 @@ class _SeraChatState extends State<SeraChat> {
     });
   }
 
-  Future<String> _generateResponse(String input, {String? systemPrompt, String mode = 'chat'}) async {
+  Future<String> _generateResponse(
+    String input, {
+    String? systemPrompt,
+    String mode = 'chat',
+  }) async {
     try {
       final response = await http.post(
         Uri.parse('http://localhost:8000/generate'),
@@ -68,7 +70,7 @@ class _SeraChatState extends State<SeraChat> {
           'stream': false,
           'system': systemPrompt,
           'character': 'sera',
-          'name': '세라'
+          'name': '세라',
         }),
       );
 
@@ -128,11 +130,11 @@ class _SeraChatState extends State<SeraChat> {
         'stream': true,
         'system': systemPrompt,
         'character': 'sera',
-        'name': '세라'
+        'name': '세라',
       });
 
       final response = await request.send();
-      
+
       if (response.statusCode != 200) {
         final errorBody = await response.stream.bytesToString();
         print('Server Error Body: $errorBody');
@@ -168,7 +170,10 @@ class _SeraChatState extends State<SeraChat> {
     } catch (e) {
       print('Error in _sendMessage: $e');
       setState(() {
-        messages.add({'sender': 'sera', 'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.'});
+        messages.add({
+          'sender': 'sera',
+          'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+        });
       });
     } finally {
       setState(() {
@@ -195,8 +200,9 @@ class _SeraChatState extends State<SeraChat> {
       messages = [
         {
           'sender': 'sera',
-          'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
-        }
+          'text':
+              '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
+        },
       ];
     });
 
@@ -244,9 +250,7 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey),
-                ),
+                border: Border(bottom: BorderSide(color: Colors.grey)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -301,16 +305,23 @@ class _SeraChatState extends State<SeraChat> {
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: messages.length,
                 itemBuilder: (context, idx) {
                   final msg = messages[idx];
                   final isSera = msg['sender'] == 'sera';
                   return Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    alignment: isSera ? Alignment.centerLeft : Alignment.centerRight,
+                    alignment:
+                        isSera ? Alignment.centerLeft : Alignment.centerRight,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: isSera ? Colors.white : Colors.blue[100],
                         borderRadius: BorderRadius.circular(16),
@@ -335,19 +346,25 @@ class _SeraChatState extends State<SeraChat> {
                 runSpacing: 8,
                 children: [
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('coding-helper'),
+                    onPressed:
+                        _isLoading ? null : () => _changeMode('coding-helper'),
                     child: const Text('💻 코딩 도우미'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('tech-explainer'),
+                    onPressed:
+                        _isLoading ? null : () => _changeMode('tech-explainer'),
                     child: const Text('🔧 기술 설명'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('debug-assistant'),
+                    onPressed:
+                        _isLoading
+                            ? null
+                            : () => _changeMode('debug-assistant'),
                     child: const Text('🐛 디버깅 도우미'),
                   ),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : () => _changeMode('learning-path'),
+                    onPressed:
+                        _isLoading ? null : () => _changeMode('learning-path'),
                     child: const Text('📚 학습 로드맵'),
                   ),
                 ],
@@ -357,9 +374,7 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey)),
               ),
               child: Row(
                 children: [
@@ -373,7 +388,10 @@ class _SeraChatState extends State<SeraChat> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(20)),
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ),
@@ -386,7 +404,10 @@ class _SeraChatState extends State<SeraChat> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text('전송'),
                   ),
@@ -397,9 +418,7 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               height: 56,
               decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey)),
                 color: Colors.white,
               ),
               child: Row(
