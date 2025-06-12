@@ -307,7 +307,7 @@ class _HomePageState extends State<HomePage> {
                                         foregroundColor: Colors.black,
                                       ),
                                       child: const Text("세라와 채팅 시작하기"),
-                                      ),
+                                    ),
                                   if (slide["id"] == 3)
                                     ElevatedButton(
                                       onPressed: () {
@@ -343,8 +343,6 @@ class _HomePageState extends State<HomePage> {
                     );
                   },
                 ),
-              ],
-            ),
               ],
             ),
           ),

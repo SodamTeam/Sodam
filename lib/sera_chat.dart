@@ -19,6 +19,7 @@ class SeraChat extends StatefulWidget {
 class _SeraChatState extends State<SeraChat> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _textFieldFocus = FocusNode();
   final int userId = 1;
   final ChatService chatService = ChatService();
 
@@ -39,12 +40,10 @@ class _SeraChatState extends State<SeraChat> {
   };
 
   String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
-  String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
     _loadProfile();
     _loadHistory();
   }
@@ -184,13 +183,13 @@ class _SeraChatState extends State<SeraChat> {
     });
 
     String initialPrompt = '';
-    if (newMode == 'coding-helper') {
+    if (newMode == 'code-helper') {
       initialPrompt = '코딩을 도와줘!';
     } else if (newMode == 'tech-explainer') {
       initialPrompt = '기술을 설명해줘!';
-    } else if (newMode == 'debug-assistant') {
+    } else if (newMode == 'debugging') {
       initialPrompt = '디버깅을 도와줘!';
-    } else if (newMode == 'learning-path') {
+    } else if (newMode == 'learning-roadmap') {
       initialPrompt = '학습 로드맵을 만들어줘!';
     } else {
       initialPrompt = '';
@@ -272,7 +271,6 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey)),
                 border: Border(bottom: BorderSide(color: Colors.grey)),
               ),
               child: Row(
@@ -379,7 +377,6 @@ class _SeraChatState extends State<SeraChat> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey)),
                 border: Border(top: BorderSide(color: Colors.grey)),
               ),
               child: Row(

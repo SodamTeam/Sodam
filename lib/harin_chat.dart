@@ -91,37 +91,39 @@
         }),
       );
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final fullText = data['response'] as String;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final fullText = data['response'] as String;
 
-          String animatedText = '';
-          messages.add({'sender': 'harin', 'text': ''});
+        String animatedText = '';
+        messages.add({'sender': 'harin', 'text': ''});
+        _scrollToBottom();
+
+        for (int i = 0; i < fullText.length; i++) {
+          await Future.delayed(const Duration(milliseconds: 30));
+          animatedText += fullText[i];
+          setState(() {
+            messages[messages.length - 1]['text'] = animatedText;
+          });
           _scrollToBottom();
-
-          for (int i = 0; i < fullText.length; i++) {
-            await Future.delayed(const Duration(milliseconds: 30));
-            animatedText += fullText[i];
-            setState(() {
-              messages[messages.length - 1]['text'] = animatedText;
-            });
-            _scrollToBottom();
-          }
-
-          await chatService.saveHistory(userId, 'harin', 'harin', fullText);
-        } else {
-          throw Exception('Failed to generate response');
         }
-      } catch (e) {
-        setState(() {
-          messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다.'});
-        });
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
+
+        await chatService.saveHistory(userId, 'harin', 'harin', fullText);
+        return fullText;
+      } else {
+        throw Exception('Failed to generate response');
       }
+    } catch (e) {
+      setState(() {
+        messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다.'});
+      });
+      return '죄송합니다. 오류가 발생했습니다.';
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
+  }
 
     void _sendMessage() async {
       final input = _controller.text.trim();
@@ -278,21 +280,21 @@
         return;
       }
 
-    try {
-      final request = http.Request(
-        'POST',
-        Uri.parse('${Config.baseUrl}/api/chat/generate'),
-      ); // API Gateway URL 사용
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode({
-        'model': 'gemma3:4b',
-        'prompt': initialPrompt,
-        'mode': newMode == 'book-recommendation' ? 'book' : newMode,
-        'stream': true,
-        'system': systemPrompt,
-        'character': 'harin',
-        'name': '하린',
-      });
+      try {
+        final request = http.Request(
+          'POST',
+          Uri.parse('${Config.baseUrl}/api/chat/generate'),
+        );
+        request.headers['Content-Type'] = 'application/json';
+        request.body = jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': initialPrompt,
+          'mode': newMode == 'book-recommendation' ? 'book' : newMode,
+          'stream': true,
+          'system': systemPrompt,
+          'character': 'harin',
+          'name': '하린',
+        });
 
         final response = await request.send();
         final stream = response.stream.transform(utf8.decoder).transform(const LineSplitter());
@@ -320,18 +322,6 @@
       } finally {
         setState(() => _isLoading = false);
       }
-    }
-
-    void _scrollToBottom() {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
     }
 
     @override

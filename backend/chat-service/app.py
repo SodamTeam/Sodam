@@ -77,16 +77,17 @@ async def generate(req: GenerateRequest):
         if req.mode == "book":
             if not req.prompt:
                 raise HTTPException(status_code=400, detail="책 키워드를 입력해주세요.")
-            async with httpx.AsyncClient() as client:
-                params = {
-                    "q": req.prompt,
-                    "maxResults": 3,
-                    "printType": "books",
-                    "langRestrict": "ko"
-                }
-                resp = await client.get(GOOGLE_BOOKS_API, params=params)
-                if resp.status_code != 200:
-                    raise HTTPException(status_code=resp.status_code, detail="Google Books API 오류")
+            try:
+                async with httpx.AsyncClient() as client:
+                    params = {
+                        "q": req.prompt,
+                        "maxResults": 3,
+                        "printType": "books",
+                        "langRestrict": "ko"
+                    }
+                    resp = await client.get(GOOGLE_BOOKS_API, params=params)
+                    if resp.status_code != 200:
+                        raise HTTPException(status_code=resp.status_code, detail="Google Books API 오류")
 
                     data = resp.json()
                     books = data.get("items", [])

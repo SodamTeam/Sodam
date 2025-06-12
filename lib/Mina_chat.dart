@@ -287,7 +287,7 @@ class _MinaChatState extends State<MinaChat> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      onSubmitted: _sendMessage,
+                      onSubmitted: (_) => _sendMessage(),
                       decoration: const InputDecoration(
                         hintText: '감정을 자유롭게 적어보세요...',
                         border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
