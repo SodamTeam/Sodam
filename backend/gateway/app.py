@@ -1,3 +1,5 @@
+# backend/gateway/app.py
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -24,6 +26,8 @@ app.add_middleware(
 CHAT_SERVICE_URL = "http://localhost:8001"  # chat-service
 AUTH_SERVICE_URL = "http://localhost:8002"  # auth-service
 PROFILE_SERVICE_URL = "http://localhost:8003"  # profile-service
+CHAT_HISTORY_SERVICE_URL = "http://localhost:8004" 
+
 
 # HTTP 클라이언트 설정
 http_client = httpx.AsyncClient(timeout=30.0)
@@ -83,15 +87,25 @@ async def create_chat(request: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/chat/history/{user_id}")
-async def get_chat_history(user_id: int):
-    try:
-        response = await http_client.get(
-            f"{CHAT_SERVICE_URL}/chat/history/{user_id}"
-        )
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/api/chat/history/{user_id}/{room}")
+async def get_chat_history(user_id: int, room: str):
+    response = await http_client.get(
+        f"{CHAT_HISTORY_SERVICE_URL}/history/{user_id}/{room}"
+    )
+    return response.json()
+
+@app.post("/api/chat/history")
+async def create_chat_history(entry: dict):
+    """{ "user_id": int, "sender": "user"|"bot", "content": str } 을 저장"""
+    response = await http_client.post(
+        f"{CHAT_HISTORY_SERVICE_URL}/history/",
+        json=entry
+    )
+    return JSONResponse(
+        status_code=response.status_code,
+        content=response.json()
+    )
+
 
 # 인증 서비스 라우팅
 @app.post("/api/auth/login")
@@ -105,7 +119,10 @@ async def login(request: Request):
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         print(f"Login response: {response.status_code} - {response.text}")  # 디버깅용 로그
-        return response.json()
+        return JSONResponse(
+            status_code=response.status_code,
+            content=response.json()
+        )
     except Exception as e:
         print(f"Login error: {str(e)}")  # 디버깅용 로그
         raise HTTPException(status_code=500, detail=str(e))
@@ -113,12 +130,12 @@ async def login(request: Request):
 @app.post("/api/auth/signup")
 async def signup(request: Request):
     try:
-        form_data = await request.form()
-        print(f"Signup request data: {dict(form_data)}")  # 디버깅용 로그
+        request_data = await request.json()
+        print(f"Signup request data: {request_data}")  # 디버깅용 로그
         response = await http_client.post(
             f"{AUTH_SERVICE_URL}/signup",
-            data=dict(form_data),
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
+            json=request_data,
+            headers={"Content-Type": "application/json"}
         )
         print(f"Signup response: {response.status_code} - {response.text}")  # 디버깅용 로그
         return response.json()
