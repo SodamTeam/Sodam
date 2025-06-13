@@ -1,6 +1,3 @@
-아래 내용으로 `backend/README.md` 를 다시 덮어쓰면 **Docker 관련 문구가 모두 제거된** 버전이 됩니다.
-
-````markdown
 # ⚙️ Sodam - Backend Monorepo
 
 Flutter 앱 **“Sodam”** 의 모든 마이크로서비스를 담고 있는 백엔드 루트 디렉터리입니다.
