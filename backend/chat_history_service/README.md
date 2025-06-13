@@ -26,7 +26,6 @@ FastAPI + SQLite로 채팅 내용을 영구 저장하고, 사용자·대화방(r
 |-------|------|
 | Backend | FastAPI, Uvicorn |
 | DB | SQLAlchemy + SQLite |
-| Container | Docker (python:3.11-slim) |
 
 ---
 
@@ -51,17 +50,6 @@ uvicorn app:app --reload --port 8003
 
 ---
 
-## 🐳 Docker 사용
-
-```bash
-docker build -t sodam-history:latest .
-docker run -d -p 8003:8003 --name sodam-history \
-  -v "$PWD/history.db:/app/history.db" \
-  sodam-history:latest
-```
-
----
-
 ## 📂 프로젝트 구조
 
 ```text
@@ -70,7 +58,6 @@ chat_history_service/
 ├── database.py     # DB 세션·엔진
 ├── models.py       # ChatHistory 테이블
 ├── schemas.py      # Pydantic 스키마
-├── Dockerfile
 ├── requirements.txt
 └── history.db      # SQLite(런타임 생성)
 ```
