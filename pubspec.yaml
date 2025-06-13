@@ -107,6 +107,7 @@ flutter:
     - assets/introicon.png
     - assets/sodam_icon.png
     - assets/sera_chat.jpg
+    - assets/sounds/
     - assets/sodam_logo_login.png
 
   # An image asset can refer to one or more resolution-specific "variants", see

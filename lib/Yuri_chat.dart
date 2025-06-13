@@ -34,7 +34,7 @@ class _YuriChatState extends State<YuriChat> {
 
   String mode = 'default';
   bool _isLoading = false;
-  String systemPrompt = ''; // 초기값을 빈 문자열로 설정
+  String systemPrompt = '';
 
   final Map<String, String> modeLabels = {
     'science-explainer': '과학 설명',
@@ -79,37 +79,6 @@ class _YuriChatState extends State<YuriChat> {
     });
   }
 
-  Future<String> _generateResponse(
-    String input, {
-    String? systemPrompt,
-    String mode = 'chat',
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'model': 'gemma3:4b',
-          'prompt': input,
-          'mode': mode,
-          'stream': false,
-          'system': systemPrompt,
-          'character': 'yuri',
-          'name': '유리',
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['response'];
-      } else {
-        throw Exception('Failed to generate response');
-      }
-    } catch (e) {
-      return '죄송합니다. 오류가 발생했습니다.';
-    }
-  }
-
   void _sendMessage() async {
     final input = _controller.text.trim();
     if (input.isEmpty || _isLoading) return;
@@ -121,7 +90,6 @@ class _YuriChatState extends State<YuriChat> {
 
     await chatService.saveHistory(userId, 'yuri', 'user', input);
 
-    // 이전 대화 내용을 포함한 프롬프트 생성
     String conversationHistory = '';
     for (var i = 0; i < messages.length - 1; i++) {
       final message = messages[i];
@@ -133,7 +101,6 @@ class _YuriChatState extends State<YuriChat> {
     }
     conversationHistory += '사용자: $input';
 
-    // 모드에 따라 prefix 추가
     String promptWithPrefix = conversationHistory;
     if (mode == 'book-recommendation') {
       promptWithPrefix = '책을 추천해줘!\n$conversationHistory';
@@ -183,7 +150,6 @@ class _YuriChatState extends State<YuriChat> {
       setState(() {
         _isLoading = false;
       });
-      // 스트리밍이 완료된 후 응답 저장
       await chatService.saveHistory(userId, 'yuri', 'yuri', fullResponse);
     } catch (e) {
       print('Error in _sendMessage: $e');
@@ -218,8 +184,7 @@ class _YuriChatState extends State<YuriChat> {
       messages = [
         {
           'sender': 'yuri',
-          'text':
-              '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
+          'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
         },
       ];
     });
@@ -233,8 +198,6 @@ class _YuriChatState extends State<YuriChat> {
       initialPrompt = '자연 현상을 탐험해보자!';
     } else if (newMode == 'science-news') {
       initialPrompt = '최신 과학 뉴스를 알려줘!';
-    } else {
-      initialPrompt = '';
     }
 
     if (initialPrompt.isNotEmpty) {
@@ -242,18 +205,55 @@ class _YuriChatState extends State<YuriChat> {
         _isLoading = true;
       });
 
-      final reply = await _generateResponse(
-        initialPrompt,
-        systemPrompt: systemPrompt,
-        mode: newMode,
-      );
+      try {
+        final request = http.Request('POST', Uri.parse(_baseUrl));
+        request.headers['Content-Type'] = 'application/json';
+        request.body = jsonEncode({
+          'model': 'gemma3:4b',
+          'prompt': initialPrompt,
+          'mode': newMode,
+          'stream': true,
+          'system': systemPrompt,
+          'character': 'yuri',
+          'name': '유리',
+        });
 
-      setState(() {
-        messages.add({'sender': 'yuri', 'text': reply});
-        _isLoading = false;
-      });
+        final response = await request.send();
+        final stream = response.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter());
 
-      _scrollToBottom();
+        String fullResponse = '';
+        await for (final line in stream) {
+          if (line.startsWith('data: ')) {
+            final data = jsonDecode(line.substring(6));
+            final chunk = data['response'] as String;
+
+            setState(() {
+              if (messages.isNotEmpty && messages.last['sender'] == 'yuri') {
+                messages.last['text'] = fullResponse + chunk;
+              } else {
+                messages.add({'sender': 'yuri', 'text': chunk});
+              }
+              fullResponse += chunk;
+            });
+            _scrollToBottom();
+          }
+        }
+        await chatService.saveHistory(userId, 'yuri', 'yuri', fullResponse);
+      } catch (e) {
+        print('Error in _changeMode: $e');
+        setState(() {
+          messages.add({
+            'sender': 'yuri',
+            'text': '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+          });
+        });
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -271,7 +271,6 @@ class _YuriChatState extends State<YuriChat> {
       body: SafeArea(
         child: Column(
           children: [
-            // 상단 헤더 부분 전체를 이 코드로 교체하세요.
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
@@ -284,104 +283,17 @@ class _YuriChatState extends State<YuriChat> {
                     onPressed: widget.goBack,
                     icon: const Icon(Icons.chevron_left),
                   ),
-                  const Text(
+                  Expanded(
+                  child: Center(
+                  child: const Text(
                     '유리',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder:
-                                (_) => AlertDialog(
-                                  title: const Text('대화 내역'),
-                                  content: SizedBox(
-                                    width: double.maxFinite,
-                                    height: 300,
-                                    child: ListView.builder(
-                                      itemCount: messages.length,
-                                      itemBuilder: (context, idx) {
-                                        final msg = messages[idx];
-                                        if (msg['sender'] == 'timestamp') {
-                                          return Center(
-                                            child: TextButton(
-                                              onPressed: () {},
-                                              child: Text(msg['text']!),
-                                            ),
-                                          );
-                                        }
-                                        final isYuri = msg['sender'] == 'yuri';
-                                        return Container(
-                                          margin: const EdgeInsets.symmetric(
-                                            vertical: 4,
-                                          ),
-                                          alignment:
-                                              isYuri
-                                                  ? Alignment.centerLeft
-                                                  : Alignment.centerRight,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 14,
-                                              vertical: 10,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  isYuri
-                                                      ? Colors.white
-                                                      : Colors.purple[100],
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            child: Text(
-                                              msg['text']!,
-                                              style: TextStyle(
-                                                color:
-                                                    isYuri
-                                                        ? Colors.black87
-                                                        : Colors.purple[900],
-                                                fontSize: 15,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed:
-                                          () => Navigator.of(context).pop(),
-                                      child: const Text('닫기'),
-                                    ),
-                                  ],
-                                ),
-                          );
-                        },
-                        padding: const EdgeInsets.only(right: 8.0),
-                        iconSize: 32,
                       ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/profile');
-                        },
-                        padding: const EdgeInsets.only(right: 8.0),
-                        iconSize: 32,
-                        icon: const CircleAvatar(
-                          radius: 16,
-                          backgroundImage: NetworkImage(
-                            'https://randomuser.me/api/portraits/women/45.jpg',
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
-            // 채팅 헤더
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               child: Row(
@@ -402,7 +314,6 @@ class _YuriChatState extends State<YuriChat> {
                 ],
               ),
             ),
-            // 채팅 메시지 영역
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
@@ -411,8 +322,7 @@ class _YuriChatState extends State<YuriChat> {
                   final msg = messages[idx];
                   final isYuri = msg['sender'] == 'yuri';
                   return Align(
-                    alignment:
-                        isYuri ? Alignment.centerLeft : Alignment.centerRight,
+                    alignment: isYuri ? Alignment.centerLeft : Alignment.centerRight,
                     child: Container(
                       margin: const EdgeInsets.symmetric(
                         vertical: 4,
@@ -423,14 +333,12 @@ class _YuriChatState extends State<YuriChat> {
                         color: isYuri ? Colors.grey[200] : Colors.purple[100],
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(msg['text']!),
+                      child: Text(msg['text'] ?? ''),
                     ),
                   );
                 },
               ),
             ),
-
-            // 기능 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Wrap(
@@ -438,35 +346,24 @@ class _YuriChatState extends State<YuriChat> {
                 runSpacing: 8,
                 children: [
                   ElevatedButton(
-                    onPressed:
-                        _isLoading
-                            ? null
-                            : () => _changeMode('science-explainer'),
+                    onPressed: _isLoading ? null : () => _changeMode('science-explainer'),
                     child: const Text('🔬 과학 설명'),
                   ),
                   ElevatedButton(
-                    onPressed:
-                        _isLoading
-                            ? null
-                            : () => _changeMode('experiment-helper'),
+                    onPressed: _isLoading ? null : () => _changeMode('experiment-helper'),
                     child: const Text('🧪 실험 도우미'),
                   ),
                   ElevatedButton(
-                    onPressed:
-                        _isLoading
-                            ? null
-                            : () => _changeMode('nature-explorer'),
+                    onPressed: _isLoading ? null : () => _changeMode('nature-explorer'),
                     child: const Text('🌱 자연 탐험'),
                   ),
                   ElevatedButton(
-                    onPressed:
-                        _isLoading ? null : () => _changeMode('science-news'),
+                    onPressed: _isLoading ? null : () => _changeMode('science-news'),
                     child: const Text('📰 과학 뉴스'),
                   ),
                 ],
               ),
             ),
-            // 입력창
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
@@ -509,25 +406,7 @@ class _YuriChatState extends State<YuriChat> {
                   ),
                 ],
               ),
-            ),
-            // 하단 네비게이션
-            Container(
-              height: 56,
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey)),
-                color: Colors.white,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _navItem(Icons.home, '홈'),
-                  _navItem(Icons.smart_toy, 'AI'),
-                  _navItem(Icons.search, '탐색'),
-                  _navItem(Icons.settings, '설정'),
-                  _navItem(Icons.person, '나'),
-                ],
-              ),
-            ),
+            )
           ],
         ),
       ),

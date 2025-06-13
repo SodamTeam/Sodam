@@ -65,8 +65,7 @@ def main():
         8004
     )
     processes.append(history_process)
-    time.sleep(2)
-    
+
     # Diary Service (8005 포트)
     diary_process = run_service(
         "Diary Service",

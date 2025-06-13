@@ -1,5 +1,3 @@
-// Sodam/lib/screens/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 
@@ -31,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = false);
 
     if (msg == null && mounted) {
-      Navigator.pushReplacementNamed(context, '/intermediate'); // ✅ 수정됨
+      Navigator.pushReplacementNamed(context, '/intermediate');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg!)));
     }
@@ -40,16 +38,17 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext ctx) {
     return Scaffold(
+      backgroundColor: const Color(0xFFFDF7FD), // 연보라 배경
       body: Center(
         child: Container(
-          width: 360,
+          width: 320,
           padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
-                color: Colors.black26,
+                color: Colors.black12,
                 blurRadius: 12,
                 offset: Offset(0, 6),
               ),
@@ -58,78 +57,59 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 로고 이미지 (1.5배 확대된 크기)
-              SizedBox(
-                width: 96,
-                height: 96,
-                child: Image.asset(
-                  'assets/sodam_logo_login.png',
-                  fit: BoxFit.contain,
-                ),
+              Image.asset(
+                'assets/sodam_logo_login.png',
+                width: 64,
+                height: 64,
               ),
-              const SizedBox(height: 12),
-              // ◆ 추가: 로고 아래 'SODAM' 텍스트
-              Text(
+              const SizedBox(height: 8),
+              const Text(
                 'SODAM',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFFF7A187),
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Username 입력
-              TextField(
+              TextFormField(
                 controller: _emailCtrl,
                 decoration: InputDecoration(
                   hintText: 'Username',
-                  hintStyle: TextStyle(color: Colors.grey[500]),
-                  prefixIcon: Icon(Icons.person, color: Colors.grey[600]),
+                  prefixIcon: const Icon(Icons.person),
                   filled: true,
                   fillColor: Colors.grey[200],
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 16,
-                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Password 입력
-              TextField(
+              TextFormField(
                 controller: _pwCtrl,
                 obscureText: _obscure,
                 decoration: InputDecoration(
                   hintText: 'Password',
-                  hintStyle: TextStyle(color: Colors.grey[500]),
-                  prefixIcon: Icon(Icons.lock, color: Colors.grey[600]),
+                  prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscure ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey[600],
+                      color: Colors.grey,
                     ),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
                   filled: true,
                   fillColor: Colors.grey[200],
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 16,
-                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Sign in 버튼
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -141,16 +121,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child:
-                      _loading
-                          ? const CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          )
-                          : const Text(
-                            'Sign in',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
+                  child: _loading
+                      ? const CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white)
+                      : const Text('Sign in',
+                          style: TextStyle(color: Colors.white)),
                 ),
               ),
             ],

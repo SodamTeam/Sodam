@@ -70,16 +70,16 @@ class _CharacterSurveyScreenState extends State<CharacterSurveyScreen> {
           shape: BoxShape.circle,
           color: answers[questionIndex] == index + 1
               ? (index < 3
-                  ? Colors.green[300]
+                  ? const Color.fromARGB(255, 138, 219, 91)
                   : index > 3
-                      ? Colors.purple[300]
+                      ? const Color.fromARGB(255, 233, 182, 147)
                       : Colors.grey[400])
               : Colors.white,
           border: Border.all(
             color: index < 3
-                ? Colors.green
+                ? const Color.fromARGB(255, 145, 231, 148)
                 : index > 3
-                    ? Colors.purple
+                    ? const Color.fromARGB(255, 243, 181, 139)
                     : Colors.grey,
             width: 2,
           ),
@@ -104,47 +104,77 @@ class _CharacterSurveyScreenState extends State<CharacterSurveyScreen> {
               child: ListView.separated(
                 padding: const EdgeInsets.only(bottom: 24),
                 itemCount: questions.length + 1,
-                separatorBuilder: (_, __) => const Divider(
-                    height: 32, thickness: 1, color: Colors.grey),
+                separatorBuilder: (context, index) {
+                  if (index == 0) return const SizedBox(height: 16);
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Divider(
+                      color: Colors.grey[300],
+                      thickness: 0.8,
+                      indent: 32,
+                      endIndent: 32,
+                    ),
+                  );
+                },
                 itemBuilder: (context, index) {
                   if (index == 0) {
                     return Container(
                       width: double.infinity,
-                      color: const Color.fromARGB(255, 233, 127, 224),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 32),
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          image: const AssetImage('assets/sodam_icon.png'),
+                          fit: BoxFit.cover,
+                          colorFilter: ColorFilter.mode(
+                            Colors.white.withOpacity(0.85),
+                            BlendMode.lighten,
+                          ),
+                        ),
+                      ),
                       child: Column(
-                        children: const [
-                          Text(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Text(
                             "일상속 맞춤형 AI 친구를 선택해보세요!",
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: Colors.black,
                             ),
+                            textAlign: TextAlign.center,
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            "Sodam®",
+                          const SizedBox(height: 4),
+                          const Text(
+                            "Sodam🍃",
                             style: TextStyle(
-                              fontSize: 20,
-                              color: Colors.white70,
+                              fontSize: 32,
+                              color: Colors.black87,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
-                          SizedBox(height: 15),
-                          InfoCard(
-                            icon: Icons.balance,
-                            text:
-                                "여러분의 성격 유형을 확인할 수 있도록 솔직하게 답변해 주세요.",
-                          ),
-                          InfoCard(
-                            icon: Icons.scatter_plot,
-                            text: "친구같은 AI를 만들어보세요!",
-                          ),
-                          InfoCard(
-                            icon: Icons.menu_book,
-                            text: "설문을 통해 AI친구와 일상을 같이 보내보세요!",
+                          const SizedBox(height: 10),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 400),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: const [
+                                InfoCard(
+                                  icon: Icons.balance,
+                                  text:
+                                      "여러분의 성격 유형을 확인할 수 있도록 솔직하게 답변해 주세요.",
+                                ),
+                                InfoCard(
+                                  icon: Icons.scatter_plot,
+                                  text: "친구같은 AI를 만들어보세요!",
+                                ),
+                                InfoCard(
+                                  icon: Icons.menu_book,
+                                  text: "설문을 통해 AI친구와 일상을 같이 보내보세요!",
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -174,8 +204,8 @@ class _CharacterSurveyScreenState extends State<CharacterSurveyScreen> {
                         const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children:
-                              List.generate(7, (i) => _buildOption(i, questionIndex)),
+                          children: List.generate(
+                              7, (i) => _buildOption(i, questionIndex)),
                         ),
                       ],
                     ),
@@ -190,11 +220,11 @@ class _CharacterSurveyScreenState extends State<CharacterSurveyScreen> {
                   LinearProgressIndicator(
                     value: progress,
                     backgroundColor: Colors.grey[300],
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color.fromARGB(255, 15, 14, 15)),
                     minHeight: 8,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text("${(progress * 100).round()}% 완료"),
                 ],
               ),
@@ -216,7 +246,7 @@ class InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFDEF2E6),
+        color: const Color.fromARGB(255, 248, 248, 248),
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(12),
@@ -224,7 +254,7 @@ class InfoCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 32, color: const Color.fromARGB(255, 18, 8, 46)),
+          Icon(icon, size: 34, color: const Color.fromARGB(255, 240, 206, 183)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

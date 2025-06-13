@@ -280,18 +280,12 @@ class _SeraChatState extends State<SeraChat> {
                     onPressed: widget.goBack,
                     icon: const Icon(Icons.chevron_left),
                   ),
-                  const Text(
-                    '세라',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(onPressed: () {}, icon: const Icon(Icons.notifications)),
-                      const CircleAvatar(
-                        radius: 16,
-                        backgroundImage: NetworkImage('https://randomuser.me/api/portraits/women/65.jpg'),
+                  Expanded(
+                    child: Center(
+                      child: Text('세라',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
