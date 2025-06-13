@@ -22,7 +22,6 @@ FastAPI + JWT + SQLite 로 회원가입, 로그인, 토큰 발급/검증을 처�
 * **HS256 JWT** (기본 만료 30분)  
 * OAuth2PasswordBearer 스키마 사용  
 * SQLAlchemy ORM + SQLite (`auth.db`)  
-* Docker 이미지(포트 `8002`) 제공
 
 ---
 
@@ -33,7 +32,6 @@ FastAPI + JWT + SQLite 로 회원가입, 로그인, 토큰 발급/검증을 처�
 | Auth | OAuth2, PyJWT (jose) |
 | Hashing | Passlib(bcrypt) |
 | DB | SQLAlchemy 2 + SQLite |
-| Container | Docker (python:3.11-slim) |
 
 ---
 
