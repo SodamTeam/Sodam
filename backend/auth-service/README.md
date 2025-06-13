@@ -1,4 +1,4 @@
-# Sodam Auth-Service
+# Auth-Service
 
 Sodam 프로젝트의 인증·권한(Identity) 마이크로서비스입니다.  
 FastAPI + JWT + SQLite 로 회원가입, 로그인, 토큰 발급/검증을 처리합니다.
