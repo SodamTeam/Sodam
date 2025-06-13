@@ -1,81 +1,103 @@
-# Sodam Backend Services
+아래 내용으로 `backend/README.md` 를 다시 덮어쓰면 **Docker 관련 문구가 모두 제거된** 버전이 됩니다.
 
-## 서비스 구조
+````markdown
+# ⚙️ Sodam - Backend Monorepo
 
-```
-/backend/
-├── auth-service/      # 인증 서비스
-├── chat-service/      # 채팅 서비스
-├── history-service/   # 히스토리 서비스
-├── profile-service/   # 프로필 서비스
-└── gateway/          # API Gateway
-```
+Flutter 앱 **“Sodam”** 의 모든 마이크로서비스를 담고 있는 백엔드 루트 디렉터리입니다.
 
-## 각 서비스 설명
+| Service | Port | Tech | 설명 |
+|---------|------|------|------|
+| **API-Gateway**        | **8000** | FastAPI, httpx | BFF. 외부 요청을 내부 서비스로 라우팅 / CORS·스트리밍 프록시 |
+| **Chat-Service**       | 8001 | FastAPI, Ollama, SQLite | AI LLM 호출(SSE) + 채팅·책 추천 저장 |
+| **Auth-Service**       | 8002 | FastAPI, JWT, SQLite | 회원가입·로그인, 토큰 발급/검증 |
+| **Profile-Service**    | 8003 | FastAPI, SQLite | 캐릭터 프로필 CRUD (초기 4종) |
+| **Chat-History-Service** | 8004 | FastAPI, SQLite | 사용자별 채팅 히스토리 영구 저장 |
+| **Diary-Service**      | 8005 | FastAPI, SQLite | 감정 일기 CRUD |
 
-### Auth Service (8001)
-- 사용자 인증 및 인가 처리
-- JWT 토큰 기반 인증
-- 회원가입, 로그인 기능
+---
 
-### Chat Service (8002)
-- AI 챗봇과의 대화 처리
-- Ollama API 연동
-- 채팅 기록 저장
+## 📂 디렉터리 구조
+```text
+backend/
+├── auth-service/
+├── chat-service/
+├── chat_history_service/
+├── diary-service/
+├── gateway/
+├── profile-service/
+└── app/                 # 공용 패키지(있다면)
+````
 
-### History Service (8003)
-- 사용자 활동 기록 관리
-- 채팅 히스토리 조회
-- 통계 데이터 제공
+---
 
-### Profile Service (8004)
-- 사용자 프로필 관리
-- 설정 관리
-- 개인화 데이터 처리
+## 🚀 로컬 실행 방법
 
-### API Gateway (8000)
-- 모든 서비스에 대한 단일 진입점
-- 요청 라우팅
-- 서비스 디스커버리
+> 파이썬 3.11+ 권장. 각 서비스 디렉터리마다 `requirements.txt` 가 존재합니다.
 
-## 시작하기
-
-1. 각 서비스 디렉토리에서 의존성 설치:
 ```bash
-pip install -r requirements.txt
-```
+# 0) 공통 : 가상환경
+python -m venv .venv
+source .venv/bin/activate          # Windows: .\.venv\Scripts\activate
 
-2. 환경 변수 설정:
-각 서비스 디렉토리에 `.env` 파일을 생성하고 필요한 환경 변수를 설정합니다.
-
-3. 서비스 실행:
-```bash
-# Auth Service
+# 1) Auth-Service
 cd auth-service
-uvicorn app:app --port 8001
+pip install -r requirements.txt
+uvicorn app:app --reload --port 8002 &
 
-# Chat Service
-cd chat-service
-uvicorn app:app --port 8002
+# 2) Chat-Service
+cd ../chat-service
+pip install -r requirements.txt
+uvicorn app:app --reload --port 8001 &
 
-# History Service
-cd history-service
-uvicorn app:app --port 8003
+# 3) Chat-History-Service
+cd ../chat_history_service
+pip install -r requirements.txt
+uvicorn app:app --reload --port 8004 &
 
-# Profile Service
-cd profile-service
-uvicorn app:app --port 8004
+# 4) Profile-Service
+cd ../profile-service
+pip install -r requirements.txt
+uvicorn app:app --reload --port 8003 &
 
-# API Gateway
-cd gateway
-uvicorn app:app --port 8000
+# 5) Diary-Service
+cd ../diary-service
+pip install -r requirements.txt
+uvicorn app:app --reload --port 8005 &
+
+# 6) API-Gateway (마지막에 실행)
+cd ../gateway
+pip install -r requirements.txt
+uvicorn app:app --reload --port 8000
 ```
 
-## API 문서
+> 첫 실행 시 각 서비스는 자체적으로 SQLite DB 파일을 생성합니다.
 
-각 서비스의 API 문서는 다음 URL에서 확인할 수 있습니다:
-- Auth Service: http://localhost:8001/docs
-- Chat Service: http://localhost:8002/docs
-- History Service: http://localhost:8003/docs
-- Profile Service: http://localhost:8004/docs
-- API Gateway: http://localhost:8000/docs 
+---
+
+## 📑 API 문서 (Swagger UI)
+
+| URL                          | 서비스                  |
+| ---------------------------- | -------------------- |
+| `http://localhost:8000/docs` | API-Gateway          |
+| `http://localhost:8001/docs` | Chat-Service         |
+| `http://localhost:8002/docs` | Auth-Service         |
+| `http://localhost:8003/docs` | Profile-Service      |
+| `http://localhost:8004/docs` | Chat-History-Service |
+| `http://localhost:8005/docs` | Diary-Service        |
+
+---
+
+## 📝 개발 메모
+
+* **CORS**: 모든 서비스에서 `allow_origins=["*"]` 개발용 설정. 배포 시 도메인 화이트리스트로 제한 필요.
+* **SQLite → RDB**: 추후 PostgreSQL 등으로 교체 검토.
+* **환경 변수**: 예시값(디폴트) 사용 중. `.env` 또는 시크릿 매니저로 이전 예정.
+
+---
+
+## 📜 라이선스
+
+MIT © 2025 Sodam Team
+
+```
+```
