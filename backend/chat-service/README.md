@@ -59,18 +59,6 @@ uvicorn main:app --reload --port 8001
 
 ---
 
-## 🐳 Docker 사용
-
-```bash
-docker build -t sodam-chat:latest .
-docker run -d -p 8001:8001 --name sodam-chat \
-  -e OLLAMA_API_URL=http://host.docker.internal:11434/api/chat \
-  -e DEFAULT_MODEL=gemma3:4b \
-  sodam-chat:latest
-```
-
----
-
 ## 📂 프로젝트 구조
 
 ```text
@@ -79,7 +67,6 @@ chat-service/
 ├── database.py     # DB 세션 · 엔진
 ├── models.py       # Chat 테이블
 ├── schemas.py      # Pydantic 스키마
-├── Dockerfile
 ├── requirements.txt
 └── chat.db         # SQLite (런타임 생성)
 ```
