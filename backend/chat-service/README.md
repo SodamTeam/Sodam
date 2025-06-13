@@ -1,6 +1,6 @@
-# 💬 Sodam Chat-Service
+# Sodam Chat-Service
 
-**Sodam** 모바일 앱의 ‘대화/콘텐츠 생성’ 마이크로서비스입니다.  
+Sodam 모바일 앱의 ‘대화/콘텐츠 생성’ 마이크로서비스입니다.  
 FastAPI + SQLite 기반으로 ▶ AI 챗 응답 스트리밍 ▸ 대화 기록 저장 ▸ Google Books 추천을 담당합니다.
 
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688?logo=fastapi&logoColor=white)
@@ -9,10 +9,10 @@ FastAPI + SQLite 기반으로 ▶ AI 챗 응답 스트리밍 ▸ 대화 기록 �
 
 ---
 
-## ✨ 주요 기능
+## 주요 기능
 | 엔드포인트 | 메서드 | 설명 |
 |------------|--------|------|
-| `/api/chat/generate` | POST | Ollama LLM 호출 / **SSE 스트리밍** 지원 |
+| `/api/chat/generate` | POST | Ollama LLM 호출 / SSE 스트리밍 지원 |
 | `/generate` | POST | 위와 동일한 별칭(Alias) |
 | `/chat` | POST | 사용자의 메시지를 저장하고 LLM 응답 반환 |
 | `/chat/history/{user_id}` | GET | 특정 사용자의 채팅 기록 조회 |
@@ -21,13 +21,13 @@ FastAPI + SQLite 기반으로 ▶ AI 챗 응답 스트리밍 ▸ 대화 기록 �
 | `/api/chat/generate?mode=book` | POST | Google Books API로 책 3권 추천 |
 
 * Ollama(기본 모델 `gemma3:4b`) 프록시  
-* **Google Books** 연동 — 검색어 기반 도서 추천  
-* 채팅·응답을 **SQLite**(`chat.db`)에 저장  
+* Google Books 연동 — 검색어 기반 도서 추천  
+* 채팅·응답을 SQLite(`chat.db`)에 저장  
 * 전역 CORS 허용
 
 ---
 
-## 🛠️ 기술 스택
+## 기술 스택
 | Layer | Tech |
 |-------|------|
 | Backend | FastAPI, Uvicorn |
@@ -37,7 +37,7 @@ FastAPI + SQLite 기반으로 ▶ AI 챗 응답 스트리밍 ▸ 대화 기록 �
 
 ---
 
-## 🚀 빠른 시작
+## 실행 방법
 
 ```bash
 # 1) 의존성
@@ -58,7 +58,7 @@ uvicorn main:app --reload --port 8001
 
 ---
 
-## 📂 프로젝트 구조
+## 프로젝트 구조
 
 ```text
 chat-service/
@@ -72,7 +72,7 @@ chat-service/
 
 ---
 
-## 🔧 환경 변수
+## 환경 변수
 
 | 변수                 | 기본값                               | 설명                 |
 | ------------------ | --------------------------------- | ------------------ |
@@ -80,12 +80,3 @@ chat-service/
 | `DEFAULT_MODEL`    | `gemma3:4b`                       | 기본 모델 태그           |
 | `API_GATEWAY_URL`  | `http://localhost:8000`           | 프로필·Auth 서비스 게이트웨이 |
 | `GOOGLE_BOOKS_API` | *(고정)*                            | Google Books URL   |
-
----
-
-## 📜 라이선스
-
-MIT © 2025 Sodam Team
-
-```
-```
