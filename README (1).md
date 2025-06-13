@@ -16,7 +16,7 @@
 
 - Flutter  
 - SQLite (로컬 데이터베이스)  
-- MySQL (감정일기 데이터베이스)  
+- SQLite (감정일기 데이터베이스)  
 </details>
 
 <details>
