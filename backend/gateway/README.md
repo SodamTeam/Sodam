@@ -53,13 +53,13 @@ Swagger: http://localhost:8000/docs
 
 ##  프로젝트 구조
 
-text
+```text
 gateway/
 ├── app.py          # FastAPI BFF
 ├── __init__.py
 ├── Dockerfile      # (선택 사항: 컨테이너화 시 사용)
 └── requirements.txt
-
+```
 
 ---
 
