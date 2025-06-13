@@ -51,7 +51,7 @@ Swagger: http://localhost:8003/docs
 
 ---
 
-## 프로젝트 구조
+## 📂 프로젝트 구조
 
 text
 profile-service/
@@ -65,6 +65,7 @@ profile-service/
 
 
 ---
+
 
 ## 🔧 환경 변수 (선택)
 
