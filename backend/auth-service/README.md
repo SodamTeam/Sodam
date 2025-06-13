@@ -1,50 +1,50 @@
 # 🔐 Sodam Auth-Service
 
-**Sodam** 프로젝트의 인증/권한 분리형 마이크로서비스입니다.  
-FastAPI + JWT + SQLite 기반으로 회원가입·로그인·토큰 검증 기능을 제공합니다.
+**Sodam** 프로젝트의 인증·권한(Identity) 마이크로서비스입니다.  
+FastAPI + JWT + SQLite 로 회원가입, 로그인, 토큰 발급/검증을 처리합니다.
 
-![fastapi](https://img.shields.io/badge/FastAPI-0.111.0-009688?logo=fastapi&logoColor=white)
-![python](https://img.shields.io/badge/python-3.11-blue)
-![license](https://img.shields.io/badge/license-MIT-green)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688?logo=fastapi&logoColor=white)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
-## ✨ 주요 기능
-| 엔드포인트 | 메서드 | 설명 |
-|------------|--------|------|
-| `/register` | POST | **이메일 기반** 회원 가입 |
-| `/signup` | POST | **아이디(ID)** 기반 회원 가입 |
-| `/token` | POST | 이메일·비밀번호 로그인 → **JWT 반환** |
-| `/login` | POST | ID·비밀번호 로그인 → **JWT 반환** |
-| `/users/me` | GET  | JWT 검증 후 내 정보 조회 |
+## ✨ 주요 엔드포인트
+| Path | Method | 설명 |
+|------|--------|------|
+| `/register` | POST | **이메일** 기반 회원가입 |
+| `/signup` | POST | **ID(사용자명)** 기반 회원가입 |
+| `/token` | POST | 이메일+비밀번호 로그인 → **JWT** 발급 |
+| `/login` | POST | ID+비밀번호 로그인 → **JWT** 발급 |
+| `/users/me` | GET  | Bearer 토큰 검증 후 내 정보 반환 |
 
-* Bcrypt 비밀번호 해싱  
-* HS256 서명으로 Access Token 발급 (기본 30분 만료)  
-* SQLAlchemy ORM + SQLite 로컬 DB  
-* Docker 이미지 (포트 `8002`) 지원
+* **Bcrypt** 비밀번호 해싱  
+* **HS256 JWT** (기본 만료 30분)  
+* OAuth2PasswordBearer 스키마 사용  
+* SQLAlchemy ORM + SQLite (`auth.db`)  
+* Docker 이미지(포트 `8002`) 제공
 
 ---
 
 ## 🛠️ 기술 스택
-| Layer        | Tech |
-|--------------|------|
-| **백엔드**   | FastAPI, Uvicorn, Pydantic |
-| **ORM/DB**   | SQLAlchemy 2, SQLite |
-| **Auth**     | OAuth2PasswordBearer, PyJWT (Jose) |
-| **해싱**     | Passlib (bcrypt) |
-| **컨테이너** | Docker, python:3.11-slim |
+| Layer | Tech |
+|-------|------|
+| Backend | FastAPI, Uvicorn |
+| Auth | OAuth2, PyJWT (jose) |
+| Hashing | Passlib(bcrypt) |
+| DB | SQLAlchemy 2 + SQLite |
+| Container | Docker (python:3.11-slim) |
 
 ---
 
-## 🚀 빠른 시작 (로컬)
+## 🚀 빠른 시작
 
 ```bash
-# 1) 가상환경 & 의존성
-python -m venv .venv
-source .venv/bin/activate          # Windows = .venv\Scripts\activate
+# 1) 의존성 설치
+python -m venv .venv && source .venv/bin/activate   # Win: .\.venv\Scripts\activate
 pip install -r requirements.txt
 
-# 2) 데이터베이스 초기화 (첫 실행 시)
+# 2) DB 초기화(최초 1회)
 python - <<'PY'
 from database import Base, engine
 import models
@@ -53,3 +53,54 @@ PY
 
 # 3) 서버 실행
 uvicorn main:app --reload --port 8002
+# Swagger: http://localhost:8002/docs
+````
+
+---
+
+## 🐳 Docker 사용
+
+```bash
+# 이미지 빌드
+docker build -t sodam-auth:latest .
+
+# 컨테이너 실행
+docker run -d -p 8002:8002 --name sodam-auth \
+  -e SECRET_KEY="super-secret" \
+  -e ACCESS_TOKEN_EXPIRE_MINUTES=60 \
+  sodam-auth:latest
+```
+
+---
+
+## 📂 프로젝트 구조
+
+```text
+auth-service/
+├── app.py          # FastAPI 엔트리포인트
+├── database.py     # DB 세션 · 엔진
+├── models.py       # User 테이블
+├── schemas.py      # Pydantic 스키마
+├── Dockerfile
+├── requirements.txt
+└── auth.db         # SQLite (런타임 생성)
+```
+
+---
+
+## 🔧 환경 변수
+
+| 변수                            | 기본값                   | 설명                        |
+| ----------------------------- | --------------------- | ------------------------- |
+| `SECRET_KEY`                  | `your-secret-key`     | JWT 서명 키 (필수, **반드시 변경**) |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | 30                    | 토큰 유효기간(분)                |
+| `DATABASE_URL`                | `sqlite:///./auth.db` | SQLite 경로 또는 다른 RDB URL   |
+
+---
+
+## 📜 라이선스
+
+MIT © 2025 Sodam Team
+
+```
+```
