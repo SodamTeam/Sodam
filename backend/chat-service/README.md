@@ -1,4 +1,4 @@
-# Sodam Chat-Service
+# Chat-Service
 
 Sodam 모바일 앱의 ‘대화/콘텐츠 생성’ 마이크로서비스입니다.  
 FastAPI + SQLite 기반으로 ▶ AI 챗 응답 스트리밍 ▸ 대화 기록 저장 ▸ Google Books 추천을 담당합니다.
