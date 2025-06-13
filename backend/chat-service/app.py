@@ -1,3 +1,5 @@
+# backend/chat-service/app.py
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -13,7 +15,7 @@ import json
 
 app = FastAPI(title="Sodam Chat Service")
 
-# CORS 설정
+# CORS 설정 추가
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# DB 세션 의존성
+# 데이터베이스 세션 의존성
 def get_db():
     db = database.SessionLocal()
     try:
@@ -34,10 +36,9 @@ def get_db():
 OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/chat")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemma3:4b")
 GOOGLE_BOOKS_API = "https://www.googleapis.com/books/v1/volumes"
-API_GATEWAY_URL = "http://localhost:8000"
+API_GATEWAY_URL = "http://localhost:8000"  # API Gateway URL로 변경
 
 class GenerateRequest(BaseModel):
-    user_id: int = 0
     model: str
     messages: List[dict] | None = None
     prompt: str | None = None
@@ -60,9 +61,14 @@ class ChatResponse(BaseModel):
 @app.post("/api/chat/generate", response_model=GenerateResponse)
 async def generate(req: GenerateRequest):
     try:
+        print(f"Generate request received: {req}")  # 요청 로깅
+        
+        # 프로필 서비스에서 캐릭터 정보 가져오기
         if req.character:
+            print(f"Fetching profile for character: {req.character}")  # 프로필 요청 로깅
             async with httpx.AsyncClient() as client:
                 profile_response = await client.get(f"{API_GATEWAY_URL}/api/profile/{req.character}")
+                print(f"Profile response status: {profile_response.status_code}")  # 프로필 응답 로깅
                 if profile_response.status_code == 200:
                     profile = profile_response.json()
                     system_name = req.name if req.name else profile['name']
@@ -74,20 +80,28 @@ async def generate(req: GenerateRequest):
                     항상 {system_name}으로서 대답해.
                     """
 
+        # 'book' 모드일 경우 Google Books API 사용
         if req.mode == "book":
             if not req.prompt:
                 raise HTTPException(status_code=400, detail="책 키워드를 입력해주세요.")
+
             try:
                 async with httpx.AsyncClient() as client:
+                    # 검색어를 더 구체적으로 만듭니다
+                    search_query = f"intitle:{req.prompt} OR inauthor:{req.prompt} OR subject:{req.prompt}"
                     params = {
-                        "q": req.prompt,
+                        "q": search_query,
                         "maxResults": 3,
                         "printType": "books",
-                        "langRestrict": "ko"
+                        "orderBy": "relevance"
                     }
+                    print(f"Google Books API 호출: {GOOGLE_BOOKS_API}?{params}")  # 디버깅용 로그
                     resp = await client.get(GOOGLE_BOOKS_API, params=params)
+                    print(f"Google Books API 응답 상태 코드: {resp.status_code}")  # 디버깅용 로그
+
                     if resp.status_code != 200:
-                        raise HTTPException(status_code=resp.status_code, detail="Google Books API 오류")
+                        print(f"Google Books API 오류: {resp.text}")  # 디버깅용 로그
+                        raise HTTPException(status_code=resp.status_code, detail=f"Google Books API 오류: {resp.text}")
 
                     data = resp.json()
                     books = data.get("items", [])
@@ -124,61 +138,38 @@ async def generate(req: GenerateRequest):
         }
 
         if req.stream:
-            async def stream_and_store():
-                response_text = ""
+            async def stream_ollama_response():
+                print(f"Sending streaming request to Ollama: {payload}")  # Ollama 스트리밍 요청 로깅
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     async with client.stream('POST', OLLAMA_API_URL, json=payload) as response:
+                        print(f"Ollama streaming response status: {response.status_code}")  # Ollama 스트리밍 응답 상태 로깅
                         async for line in response.aiter_lines():
                             if line:
+                                print(f"Ollama chunk: {line}")  # Ollama 응답 청크 로깅
                                 try:
                                     data = json.loads(line)
                                     if 'message' in data:
                                         yield f"data: {json.dumps({'response': data['message']['content']})}\n\n"
                                 except json.JSONDecodeError:
+                                    print(f"JSON Decode Error for line: {line}")
                                     continue
-                # DB 저장
-                try:
-                    async with database.SessionLocal() as db:
-                        db_entry = models.ChatHistory(
-                            user_id=req.user_id,
-                            room=req.character or "default",
-                            message=req.prompt or "",
-                            response=response_text
-                        )
-                        db.add(db_entry)
-                        db.commit()
-                except Exception as e:
-                    print(f"[DB 저장 오류] {e}")
-            return StreamingResponse(stream_and_store(), media_type="text/event-stream")
-
+            return StreamingResponse(stream_ollama_response(), media_type="text/event-stream")
         else:
+            print(f"Sending non-streaming request to Ollama: {payload}")  # Ollama 일반 요청 로깅
             async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.post(OLLAMA_API_URL, json=payload)
+                print(f"Ollama response status: {resp.status_code}")  # Ollama 응답 상태 로깅
+                print(f"Ollama response: {resp.text}")  # Ollama 응답 내용 로깅
                 resp.raise_for_status()
                 data = resp.json()
 
             result = data.get("message", {}).get("content")
             if not result:
                 raise HTTPException(status_code=500, detail="LLM 응답이 비어 있어요.")
-
-            # DB 저장
-            try:
-                async with database.SessionLocal() as db:
-                    db_entry = models.ChatHistory(
-                        user_id=req.user_id,
-                        room=req.character or "default",
-                        message=req.prompt or "",
-                        response=result
-                    )
-                    db.add(db_entry)
-                    db.commit()
-            except Exception as e:
-                print(f"[DB 저장 오류] {e}")
-
             return GenerateResponse(response=result)
 
     except Exception as e:
-        print(f"Error in generate: {str(e)}")
+        print(f"Error in generate: {str(e)}")  # 오류 로깅
         raise HTTPException(status_code=500, detail=f"서버 오류: {e}")
 
 @app.post("/generate", response_model=GenerateResponse)
