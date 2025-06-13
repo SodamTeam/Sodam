@@ -58,21 +58,6 @@ uvicorn main:app --reload --port 8002
 
 ---
 
-## 🐳 Docker 사용
-
-```bash
-# 이미지 빌드
-docker build -t sodam-auth:latest .
-
-# 컨테이너 실행
-docker run -d -p 8002:8002 --name sodam-auth \
-  -e SECRET_KEY="super-secret" \
-  -e ACCESS_TOKEN_EXPIRE_MINUTES=60 \
-  sodam-auth:latest
-```
-
----
-
 ## 📂 프로젝트 구조
 
 ```text
@@ -81,7 +66,6 @@ auth-service/
 ├── database.py     # DB 세션 · 엔진
 ├── models.py       # User 테이블
 ├── schemas.py      # Pydantic 스키마
-├── Dockerfile
 ├── requirements.txt
 └── auth.db         # SQLite (런타임 생성)
 ```
