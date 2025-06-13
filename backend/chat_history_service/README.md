@@ -1,6 +1,6 @@
-# 🗂️ Sodam Chat-History Service
+# Chat History Service
 
-Sodam 앱의 **대화 로그 저장/조회** 마이크로서비스입니다.  
+Sodam 앱의 대화 로그 저장/조회 마이크로서비스입니다.  
 FastAPI + SQLite로 채팅 내용을 영구 저장하고, 사용자·대화방(room) 기준으로 가져올 수 있습니다.
 
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688?logo=fastapi&logoColor=white)
@@ -9,11 +9,11 @@ FastAPI + SQLite로 채팅 내용을 영구 저장하고, 사용자·대화방(r
 
 ---
 
-## ✨ 주요 엔드포인트
+## 주요 엔드포인트
 | Path | Method | 설명 |
 |------|--------|------|
-| `/history/` | **POST** | 채팅 1건 저장 |
-| `/history/{user_id}/{room}` | **GET** | 특정 사용자 + 방의 대화 내역 조회 (오래된 순) |
+| `/history/` | POST | 채팅 1건 저장 |
+| `/history/{user_id}/{room}` | GET | 특정 사용자 + 방의 대화 내역 조회 (오래된 순) |
 
 * `user_id`, `sender`, `content`, `room`, `timestamp` 필드 보존  
 * ORM : SQLAlchemy 2  
@@ -21,7 +21,7 @@ FastAPI + SQLite로 채팅 내용을 영구 저장하고, 사용자·대화방(r
 
 ---
 
-## 🛠️ 기술 스택
+## 기술 스택
 | Layer | Tech |
 |-------|------|
 | Backend | FastAPI, Uvicorn |
@@ -29,7 +29,7 @@ FastAPI + SQLite로 채팅 내용을 영구 저장하고, 사용자·대화방(r
 
 ---
 
-## 🚀 빠른 시작
+## 실행 방법
 
 ```bash
 # 1) 의존성
@@ -50,7 +50,7 @@ uvicorn app:app --reload --port 8003
 
 ---
 
-## 📂 프로젝트 구조
+## 프로젝트 구조
 
 ```text
 chat_history_service/
@@ -64,18 +64,9 @@ chat_history_service/
 
 ---
 
-## 🔧 환경 변수(선택)
+## 환경 변수(선택)
 
 | 변수             | 기본값                      | 설명                  |
 | -------------- | ------------------------ | ------------------- |
 | `DATABASE_URL` | `sqlite:///./history.db` | 다른 RDBMS 사용 시 오버라이드 |
 | `PORT`         | 8003                     | Uvicorn 포트 변경 시     |
-
----
-
-## 📜 라이선스
-
-MIT © 2025 Sodam Team
-
-```
-```
