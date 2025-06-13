@@ -23,11 +23,10 @@ Sodam 캐릭터들의 **프로필(성격·관심사·이미지 등)** 을 저장
 ---
 
 ## 🛠️ 기술 스택
-| Layer | Tech |
-|-------|------|
+| Layer  | Tech |
+|--------|------|
 | Backend | FastAPI, Uvicorn |
 | ORM/DB | SQLAlchemy + SQLite |
-| Container | Docker (python:3.11-slim) |
 
 ---
 
@@ -35,7 +34,7 @@ Sodam 캐릭터들의 **프로필(성격·관심사·이미지 등)** 을 저장
 
 ```bash
 # 1) 의존성 설치
-python -m venv .venv && source .venv/bin/activate   # Win: .\.venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate   # Windows: .\.venv\Scripts\activate
 pip install -r requirements.txt
 
 # 2) DB 초기화(최초 1회)
@@ -52,17 +51,6 @@ uvicorn app:app --reload --port 8003
 
 ---
 
-## 🐳 Docker 사용
-
-```bash
-docker build -t sodam-profile:latest .
-docker run -d -p 8003:8003 --name sodam-profile \
-  -v "$PWD/profile.db:/app/profile.db" \
-  sodam-profile:latest
-```
-
----
-
 ## 📂 프로젝트 구조
 
 ```text
@@ -71,14 +59,14 @@ profile-service/
 ├── database.py     # DB 세션 · 엔진
 ├── models.py       # Profile 테이블
 ├── schemas.py      # Pydantic 스키마
-├── Dockerfile
+├── Dockerfile      # (옵션: 컨테이너화 시 사용)
 ├── requirements.txt
 └── profile.db      # SQLite (런타임 생성)
 ```
 
 ---
 
-## 🔧 환경 변수(선택)
+## 🔧 환경 변수 (선택)
 
 | 변수             | 기본값                      | 설명                  |
 | -------------- | ------------------------ | ------------------- |
