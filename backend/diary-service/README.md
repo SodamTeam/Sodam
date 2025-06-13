@@ -1,73 +1,70 @@
-# 📔 Sodam Diary-Service
+````markdown
+# Sodam Diary-Service
 
-사용자가 작성한 **감정 일기(Emotion Diary)** 를 CRUD 형태로 관리하는 마이크로서비스입니다.  
-FastAPI + SQLite 로 구현되어 있으며 Gateway·모바일 앱에서 `/api/diary` REST 엔드포인트로 접근합니다.
-
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688?logo=fastapi&logoColor=white)
-![Python](https://img.shields.io/badge/python-3.11-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+사용자가 작성한 감정 일기(Emotion Diary)를 CRUD 형태로 관리하는 마이크로서비스입니다.  
+FastAPI와 SQLite로 구현됐으며, 모바일 앱·Gateway에서 `/api/diary` REST 엔드포인트로 접근합니다.
 
 ---
 
-## ✨ API 요약
+## 엔드포인트
 
 | Path | Method | 설명 |
 |------|--------|------|
-| `/api/diary` | **GET** | 일기 전체 목록(최신순) |
-| `/api/diary` | **POST** | 새 일기 작성 |
-| `/api/diary/{id}` | **PUT** | 일기 수정 |
-| `/api/diary/{id}` | **DELETE** | 일기 삭제 |
-| `/health` | **GET** | 헬스 체크 – `{"status":"diary-service OK"}` |
+| `/api/diary` | GET    | 일기 목록(최신순) |
+| `/api/diary` | POST   | 새 일기 작성 |
+| `/api/diary/{id}` | PUT | 일기 수정 |
+| `/api/diary/{id}` | DELETE | 일기 삭제 |
+| `/health` | GET | 헬스 체크 |
 
 * 필드: `id`, `date`, `mood`, `category`, `content`  
-* SQLite 파일: **`emotion_diary.db`** 자동 생성  
-* 전역 CORS 허용
+* SQLite 파일 **`emotion_diary.db`** 자동 생성  
+* CORS 전체 허용
 
 ---
 
-## 🛠️ 기술 스택
+## 기술 스택
 
-| Layer | Tech |
-|-------|------|
-| Framework | FastAPI, Uvicorn |
-| DB | SQLite (`sqlite3` 모듈) |
-| Container | Docker (옵션) |
+| 구분 | 사용 기술 |
+|------|-----------|
+| Web  | FastAPI, Uvicorn |
+| DB   | SQLite (`sqlite3` 모듈) |
 
 ---
 
-## 🚀 빠른 시작
+## 실행 방법
 
 ```bash
-# 1) 의존성
-python -m venv .venv && source .venv/bin/activate   # Win: .\.venv\Scripts\activate
+# 가상환경 준비
+python -m venv .venv
+source .venv/bin/activate           # Windows: .\.venv\Scripts\activate
+
+# 의존성 설치
 pip install fastapi uvicorn pydantic
 
-# 2) 서버 실행
+# 서버 실행
 uvicorn app:app --reload --port 8005
-# Swagger UI: http://localhost:8005/docs
+# 문서: http://localhost:8005/docs
 ````
 
 > 첫 실행 시 `emotion_diary.db` 및 `diary_entries` 테이블이 자동으로 만들어집니다.
 
 ---
 
-## 📂 프로젝트 구조
+## 프로젝트 구조
 
-```text
+```
 diary-service/
-├── app.py            # 메인 FastAPI 애플리케이션
-├── diary_service.py  # (라우터 분리 버전)
+├── app.py            # FastAPI 애플리케이션
+├── diary_service.py  # Router 분리 버전
 ├── emotion_diary.db  # SQLite (런타임 생성)
 └── requirements.txt
 ```
 
-> `diary_service.py` 는 Router 분리 버전이며, 메인 `app.py` 만으로도 동일 기능을 제공합니다.
-
 ---
 
-## 모델 스키마
+## 데이터 예시
 
-```jsonc
+```json
 {
   "id": 1,
   "date": "2025-06-14",
@@ -79,18 +76,11 @@ diary-service/
 
 ---
 
-## 🔧 환경 변수 (옵션)
+## 환경 변수 (선택)
 
-| 변수        | 기본값                | 설명                   |
-| --------- | ------------------ | -------------------- |
-| `DB_PATH` | `emotion_diary.db` | 다른 경로·파일명 사용 시 오버라이드 |
-| `PORT`    | 8005               | Uvicorn 포트 변경 시      |
+| 변수        | 기본값                | 설명                |
+| --------- | ------------------ | ----------------- |
+| `DB_PATH` | `emotion_diary.db` | 다른 경로·파일명 지정 시 사용 |
+| `PORT`    | 8005               | Uvicorn 포트 변경 시   |
 
 ---
-
-## 📜 라이선스
-
-MIT © 2025 Sodam Team
-
-```
-```
