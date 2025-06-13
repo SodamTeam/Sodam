@@ -1,4 +1,3 @@
-// Sodam/lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 
@@ -30,9 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final msg = await AuthService.login(email, pw);
     setState(() => _loading = false);
 
-    print(msg);
     if (msg == null && mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/intermediate');
     } else if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(msg!)));
@@ -42,65 +40,98 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext ctx) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.black87,
-        title: const Text('로그인'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            TextFormField(
-              controller: _emailCtrl,
-              decoration: const InputDecoration(
-                hintText: '아이디',
-                prefixIcon: Icon(Icons.email),
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.white,
+      backgroundColor: const Color(0xFFFDF7FD), // 연보라 배경
+      body: Center(
+        child: Container(
+          width: 320,
+          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 12,
+                offset: Offset(0, 6),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _pwCtrl,
-              obscureText: _obscure,
-              decoration: InputDecoration(
-                hintText: '비밀번호',
-                prefixIcon: const Icon(Icons.lock),
-                border: const OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.white,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscure ? Icons.visibility_off : Icons.visibility,
-                    color: Colors.grey,
-                  ),
-                  onPressed: () => setState(() => _obscure = !_obscure),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/sodam_logo_login.png',
+                width: 64,
+                height: 64,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'SODAM',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFF7A187),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _doLogin,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C566),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _emailCtrl,
+                decoration: InputDecoration(
+                  hintText: 'Username',
+                  prefixIcon: const Icon(Icons.person),
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
                   ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: _loading
-                    ? const CircularProgressIndicator(strokeWidth: 2)
-                    : const Text('로그인',
-                        style: TextStyle(color: Colors.white)),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _pwCtrl,
+                obscureText: _obscure,
+                decoration: InputDecoration(
+                  hintText: 'Password',
+                  prefixIcon: const Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscure ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _doLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF7A187),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _loading
+                      ? const CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white)
+                      : const Text('Sign in',
+                          style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

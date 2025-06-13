@@ -236,20 +236,42 @@ class _MinaChatState extends State<MinaChat> {
               decoration: const BoxDecoration(
                 border: Border(bottom: BorderSide(color: Colors.grey)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  IconButton(
-                    onPressed: widget.goBack,
-                    icon: const Icon(Icons.chevron_left),
+                  // 왼쪽 버튼
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: widget.goBack,
+                      icon: const Icon(Icons.chevron_left),
+                    ),
                   ),
+                  // 가운데 텍스트
                   const Text(
                     '미나',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const CircleAvatar(
+                ],
+              ),
+            ),
+            // ─── 헤더 2/2: 왼쪽 아바타 + 이름
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // 수정: 세로 패딩 축소
+              child: Row(
+                children: [
+                  CircleAvatar(
                     radius: 16,
-                    backgroundImage: AssetImage('assets/girl3.png'),
+                    backgroundImage: AssetImage('assets/girl3.png'), // 수정: 미나 사진
+                  ),
+                  const SizedBox(width: 4),                             // 수정: 가로 여백 축소
+                  const Text(
+                    '미나',                                              // 수정: 이름 추가
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,                                // 수정: 유리 화면과 동일한 색
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),

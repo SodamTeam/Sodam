@@ -339,30 +339,19 @@ class _HarinChatState extends State<HarinChat> {
                 border: Border(bottom: BorderSide(color: Colors.grey)),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
                     onPressed: widget.goBack,
                     icon: const Icon(Icons.chevron_left),
                   ),
-                  const Text(
-                    '하린',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.notifications),
-                      ),
-                      const CircleAvatar(
-                        radius: 16,
-                        backgroundImage: NetworkImage(
-                          'https://randomuser.me/api/portraits/women/44.jpg',
+                  Expanded(
+                  child: Center(
+                  child: const Text(
+                  '하린',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),

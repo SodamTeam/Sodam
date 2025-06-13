@@ -1,4 +1,5 @@
 // Sodam/lib/screens/intro_screen.dart
+
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 
@@ -10,8 +11,7 @@ class IntroScreen extends StatefulWidget {
 }
 
 class _IntroScreenState extends State<IntroScreen> {
-  static const String _title =
-      '너무 친절하진 않아도,\n딱 너한테 맞는 대화. 그게 목표야';
+  static const String _title = '너무 친절하진 않아도,\n딱 너한테 맞는 대화. 그게 목표야';
   static const String _bgImage = 'assets/introback.png';
   static const String _iconImage = 'assets/sodam_icon.png';
 
@@ -22,12 +22,12 @@ class _IntroScreenState extends State<IntroScreen> {
   }
 
   Future<void> _checkLogin() async {
-  final loggedIn = await AuthService.isLoggedIn();
-  if (!mounted) return;
-  if (loggedIn) {
-    Navigator.pushReplacementNamed(context, '/home');
+    final loggedIn = await AuthService.isLoggedIn();
+    if (!mounted) return;
+    if (loggedIn) {
+      Navigator.pushReplacementNamed(context, '/home');
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -118,21 +118,25 @@ class _PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1DB954),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            elevation: 0,
-          ),
-          child: Text(text,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+    width: double.infinity,
+    height: 48,
+    child: ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFF7A187),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        elevation: 0,
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Colors.white, // ◆ 수정: 가입하기 텍스트 색상을 흰색으로 설정
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _SecondaryButton extends StatelessWidget {
@@ -142,19 +146,19 @@ class _SecondaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: OutlinedButton(
-          onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.black,
-            side: const BorderSide(color: Colors.black, width: 1),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-          ),
-          child: Text(text,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        ),
-      );
+    width: double.infinity,
+    height: 48,
+    child: OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.black,
+        side: const BorderSide(color: Colors.black, width: 1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+    ),
+  );
 }

@@ -289,23 +289,12 @@ class _SeraChatState extends State<SeraChat> {
                     onPressed: widget.goBack,
                     icon: const Icon(Icons.chevron_left),
                   ),
-                  const Text(
-                    '세라',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.notifications),
+                  Expanded(
+                    child: Center(
+                      child: Text('세라',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      const CircleAvatar(
-                        radius: 16,
-                        backgroundImage: NetworkImage(
-                          'https://randomuser.me/api/portraits/women/44.jpg',
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -441,24 +430,6 @@ class _SeraChatState extends State<SeraChat> {
                     ),
                     child: const Text('전송'),
                   ),
-                ],
-              ),
-            ),
-            // 하단 네비게이션
-            Container(
-              height: 56,
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey)),
-                color: Colors.white,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _navItem(Icons.home, '홈'),
-                  _navItem(Icons.smart_toy, 'AI'),
-                  _navItem(Icons.search, '탐색'),
-                  _navItem(Icons.settings, '설정'),
-                  _navItem(Icons.person, '나'),
                 ],
               ),
             ),
