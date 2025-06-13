@@ -46,7 +46,7 @@ PY
 
 # 3) 서버 실행
 uvicorn app:app --reload --port 8003
-# Swagger: http://localhost:8003/docs
+Swagger: http://localhost:8003/docs
 
 
 ---
