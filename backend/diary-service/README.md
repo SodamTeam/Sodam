@@ -51,27 +51,6 @@ uvicorn app:app --reload --port 8005
 
 ---
 
-## 🐳 Docker 사용
-
-```bash
-# Dockerfile 예시(직접 필요 시)
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-EXPOSE 8005
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8005"]
-
-# 빌드 & 실행
-docker build -t sodam-diary:latest .
-docker run -d -p 8005:8005 --name sodam-diary \
-  -v "$PWD/emotion_diary.db:/app/emotion_diary.db" \
-  sodam-diary:latest
-```
-
----
-
 ## 📂 프로젝트 구조
 
 ```text
