@@ -22,9 +22,9 @@ FastAPI + httpx 스트리밍 프록시를 사용해 **Chat / Auth / Profile / Hi
 | `GET  /api/auth/users/me` | auth-service | `…/auth/users/me` |
 | `GET  /api/profile/{character}` | profile-service | `http://localhost:8003/api/profile/{character}` |
 
-* `/api/chat/generate` 는 **SSE 스트리밍** 지원 — 클라이언트에 그대로 전달  
+* `/api/chat/generate` 는 **SSE 스트리밍** 지원 → 응답을 클라이언트로 그대로 전달  
 * 전역 **CORS 허용**  
-* 모든 서브서비스 타임아웃 30 초
+* 하위 서비스 호출 **타임아웃 30 초**
 
 ---
 
@@ -34,35 +34,20 @@ FastAPI + httpx 스트리밍 프록시를 사용해 **Chat / Auth / Profile / Hi
 | Framework | FastAPI |
 | Async HTTP | httpx 0.27 |
 | Runtime | Uvicorn |
-| Container | Docker (python:3.11-slim) |
 
 ---
 
 ## 🚀 빠른 시작
 
 ```bash
-python -m venv .venv && source .venv/bin/activate   # Win: .\.venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate   # Windows: .\.venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app:app --reload --port 8000
 # Swagger: http://localhost:8000/docs
 ````
 
-> **주의:** 실제 배포 시 내부 서비스 URL(포트)을 환경에 맞게 수정하거나
-> `docker-compose` / `Kubernetes Service` 로 name-based 디스커버리를 사용하세요.
-
----
-
-## 🐳 Docker 사용
-
-```bash
-docker build -t sodam-gateway:latest .
-docker run -d -p 8000:8000 --name sodam-gateway \
-  -e CHAT_SERVICE_URL=http://chat:8001 \
-  -e AUTH_SERVICE_URL=http://auth:8002 \
-  -e PROFILE_SERVICE_URL=http://profile:8003 \
-  -e CHAT_HISTORY_SERVICE_URL=http://history:8004 \
-  sodam-gateway:latest
-```
+> **주의 :** 실제 배포 환경에서는 내부 서비스 URL(포트)을 인프라에 맞게 수정하거나
+> `docker-compose` · Kubernetes Service 등으로 name-based 디스커버리를 사용하세요.
 
 ---
 
@@ -72,7 +57,7 @@ docker run -d -p 8000:8000 --name sodam-gateway \
 gateway/
 ├── app.py          # FastAPI BFF
 ├── __init__.py
-├── Dockerfile
+├── Dockerfile      # (선택 사항: 컨테이너화 시 사용)
 └── requirements.txt
 ```
 
