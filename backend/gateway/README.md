@@ -43,7 +43,7 @@ bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .\.venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app:app --reload --port 8000
-# Swagger: http://localhost:8000/docs
+Swagger: http://localhost:8000/docs
 
 
 > **주의 :** 실제 배포 환경에서는 내부 서비스 URL(포트)을 인프라에 맞게 수정하거나
