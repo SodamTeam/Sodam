@@ -53,13 +53,13 @@ Swagger UI: http://localhost:8005/docs
 
 ##  프로젝트 구조
 
-text
+```text
 diary-service/
 ├── app.py            # 메인 FastAPI 애플리케이션
 ├── diary_service.py  # (라우터 분리 버전)
 ├── emotion_diary.db  # SQLite (런타임 생성)
 └── requirements.txt
-
+```
 
 > diary_service.py 는 Router 분리 버전이며, 메인 app.py 만으로도 동일 기능을 제공합니다.
 
