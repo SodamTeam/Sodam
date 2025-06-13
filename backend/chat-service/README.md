@@ -34,7 +34,6 @@ FastAPI + SQLite 기반으로 ▶ AI 챗 응답 스트리밍 ▸ 대화 기록 �
 | LLM Proxy | Ollama |
 | DB | SQLAlchemy 2 + SQLite |
 | 외부 API | Google Books |
-| Container | Docker (python:3.11-slim) |
 
 ---
 
