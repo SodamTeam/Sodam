@@ -1,4 +1,4 @@
-# ⚙️ Sodam - Backend Monorepo
+# Backend Monorepo
 
 Flutter 앱 **“Sodam”** 의 모든 마이크로서비스를 담고 있는 백엔드 루트 디렉터리입니다.
 
@@ -13,7 +13,7 @@ Flutter 앱 **“Sodam”** 의 모든 마이크로서비스를 담고 있는 �
 
 ---
 
-## 📂 디렉터리 구조
+##  디렉터리 구조
 ```text
 backend/
 ├── auth-service/
@@ -27,7 +27,7 @@ backend/
 
 ---
 
-## 🚀 로컬 실행 방법
+##  로컬 실행 방법
 
 > 파이썬 3.11+ 권장. 각 서비스 디렉터리마다 `requirements.txt` 가 존재합니다.
 
@@ -71,7 +71,7 @@ uvicorn app:app --reload --port 8000
 
 ---
 
-## 📑 API 문서 (Swagger UI)
+##  API 문서 (Swagger UI)
 
 | URL                          | 서비스                  |
 | ---------------------------- | -------------------- |
@@ -84,7 +84,7 @@ uvicorn app:app --reload --port 8000
 
 ---
 
-## 📝 개발 메모
+##  개발 메모
 
 * **CORS**: 모든 서비스에서 `allow_origins=["*"]` 개발용 설정. 배포 시 도메인 화이트리스트로 제한 필요.
 * **SQLite → RDB**: 추후 PostgreSQL 등으로 교체 검토.
@@ -92,9 +92,3 @@ uvicorn app:app --reload --port 8000
 
 ---
 
-## 📜 라이선스
-
-MIT © 2025 Sodam Team
-
-```
-```
