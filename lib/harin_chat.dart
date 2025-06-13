@@ -1,75 +1,88 @@
-  // 변경된 import
-  import 'package:flutter/material.dart';
-  import 'dart:async';
-  import 'dart:convert';
-  import 'package:http/http.dart' as http;
-  import 'profile_service.dart';
-  import 'package:flutter/foundation.dart';
-  import 'config.dart';
-  import 'chat_service.dart';
+import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'profile_service.dart';
+import 'package:flutter/foundation.dart';
+import 'config.dart';
+import 'chat_service.dart';
 
-  class HarinChat extends StatefulWidget {
-    final VoidCallback goBack;
-    const HarinChat({super.key, required this.goBack, Map<String, dynamic>? preferences});
+class HarinChat extends StatefulWidget {
+  final VoidCallback goBack;
+  const HarinChat({super.key, required this.goBack});
 
-    @override
-    State<HarinChat> createState() => _HarinChatState();
+  @override
+  State<HarinChat> createState() => _HarinChatState();
+}
+
+class _HarinChatState extends State<HarinChat> {
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  final int userId = 1;
+  final ChatService chatService = ChatService();
+
+  List<Map<String, String>> messages = [
+    {'sender': 'harin', 'text': '안녕하세요, 저는 문학 소녀 하린이에요 🌸\n오늘은 어떤 이야기를 나눠볼까요?'},
+  ];
+
+  String mode = 'default';
+  bool _isLoading = false;
+  String systemPrompt = ''; // 초기값을 빈 문자열로 설정
+
+  final Map<String, String> modeLabels = {
+    'novel-helper': '소설 작성 도우미',
+    'literary-analysis': '문학 분석',
+    'poetry-play': '시 쓰기 놀이',
+    'book-recommendation': '독서 추천 & 기록',
+    'default': '기본',
+  };
+
+  String get _baseUrl =>
+      '${Config.baseUrl}/api/chat/generate'; // API Gateway 엔드포인트 사용
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile(); // 프로필 로드 함수 호출
+    _loadHistory();
   }
 
-  class _HarinChatState extends State<HarinChat> {
-    final TextEditingController _controller = TextEditingController();
-    final ScrollController _scrollController = ScrollController();
-    final int userId = 1;
-    final ChatService chatService = ChatService();
+  Future<void> _loadHistory() async {
+    try {
+      final hist = await chatService.fetchHistory(
+        userId,
+        'harin',
+      ); // ◆ 사용자 아이디, 캐릭터 키는 상황에 맞게 변경
+      final loaded =
+          hist
+              .map(
+                (e) => {
+                  'sender': e['sender'] as String,
+                  'text': e['content'] as String,
+                },
+              )
+              .toList();
 
-    List<Map<String, String>> messages = [
-      {'sender': 'harin', 'text': '안녕하세요, 저는 문학 소녀 하린이에요 🌸\n오늘은 어떤 이야기를 나눠볼까요?'},
-    ];
-
-    String mode = 'default';
-    bool _isLoading = false;
-    String systemPrompt = '';
-
-    final Map<String, String> modeLabels = {
-      'novel-helper': '소설 작성 도우미',
-      'literary-analysis': '문학 분석',
-      'poetry-play': '시 쓰기 놀이',
-      'book-recommendation': '독서 추천 & 기록',
-      'default': '기본',
-    };
-
-    String get _baseUrl => '${Config.baseUrl}/api/chat/generate';
-
-    @override
-    void initState() {
-      super.initState();
-      _loadProfile();
-      _loadHistory();
-    }
-
-    Future<void> _loadHistory() async {
-      try {
-        final hist = await chatService.fetchHistory(userId, 'harin');
-        final loaded = hist
-            .map((e) => {'sender': e['sender'] as String, 'text': e['content'] as String})
-            .toList();
-        if (loaded.isNotEmpty) {
-          setState(() {
-            messages.addAll(loaded);
-          });
-          _scrollToBottom();
-        }
-      } catch (e) {
-        print('히스토리 로드 에러: $e');
+      if (loaded.isNotEmpty) {
+        setState(() {
+          // --- 수정 시작: 기존 messages(인사말 등)는 유지하고, 서버 히스토리만 뒤에 붙이기 ---
+          messages.addAll(loaded);
+          // --- 수정 끝 ---
+        });
+        _scrollToBottom();
       }
+      // loaded가 비어 있으면 아무것도 안 함 → 인사말만 화면에 남음
+    } catch (e) {
+      print('히스토리 로드 에러: $e');
     }
+  }
 
-    Future<void> _loadProfile() async {
-      final profile = await ProfileService.getProfile('harin');
-      setState(() {
-        systemPrompt = profile;
-      });
-    }
+  Future<void> _loadProfile() async {
+    final profile = await ProfileService.getProfile('harin');
+    setState(() {
+      systemPrompt = profile;
+    });
+  }
 
   Future<String> _generateResponse(
     String input, {
@@ -93,49 +106,25 @@
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final fullText = data['response'] as String;
-
-        String animatedText = '';
-        messages.add({'sender': 'harin', 'text': ''});
-        _scrollToBottom();
-
-        for (int i = 0; i < fullText.length; i++) {
-          await Future.delayed(const Duration(milliseconds: 30));
-          animatedText += fullText[i];
-          setState(() {
-            messages[messages.length - 1]['text'] = animatedText;
-          });
-          _scrollToBottom();
-        }
-
-        await chatService.saveHistory(userId, 'harin', 'harin', fullText);
-        return fullText;
+        return data['response'];
       } else {
         throw Exception('Failed to generate response');
       }
     } catch (e) {
-      setState(() {
-        messages.add({'sender': 'harin', 'text': '죄송합니다. 오류가 발생했습니다.'});
-      });
       return '죄송합니다. 오류가 발생했습니다.';
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
-    void _sendMessage() async {
-      final input = _controller.text.trim();
-      if (input.isEmpty || _isLoading) return;
+  void _sendMessage() async {
+    final input = _controller.text.trim();
+    if (input.isEmpty || _isLoading) return;
+    setState(() {
+      messages.add({'sender': 'user', 'text': input});
+      _controller.clear();
+      _isLoading = true;
+    });
 
-      setState(() {
-        messages.add({'sender': 'user', 'text': input});
-        _controller.clear();
-        _isLoading = true;
-      });
-
-      await chatService.saveHistory(userId, 'harin', 'user', input);
+    await chatService.saveHistory(userId, 'harin', 'user', input);
 
     // 이전 대화 내용을 포함한 프롬프트 생성
     String conversationHistory = '';
@@ -249,55 +238,64 @@
     });
   }
 
-    void _changeMode(String newMode) async {
+  void _changeMode(String newMode) async {
+    setState(() {
+      mode = newMode;
+      messages = [
+        {
+          'sender': 'harin',
+          'text':
+              '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
+        },
+      ];
+      _isLoading = true;
+    });
+
+    String initialPrompt = '';
+    if (newMode == 'novel-helper') {
+      initialPrompt = '소설 작성을 도와줘!';
+    } else if (newMode == 'literary-analysis') {
+      initialPrompt = '문학 분석을 도와줘!';
+    } else if (newMode == 'poetry-play') {
+      initialPrompt = '시 쓰기 놀이를 하자!';
+    } else if (newMode == 'book-recommendation') {
       setState(() {
-        mode = newMode;
-        messages = [
-          {
-            'sender': 'harin',
-            'text': '현재 모드는 ${modeLabels[newMode] ?? newMode}입니다. 이 모드에 대해 이야기해볼까요?',
-          },
-        ];
-        _isLoading = true;
+        messages.add({
+          'sender': 'harin',
+          'text': '어떤 종류의 책을 찾고 계신가요? 제목, 저자, 주제 등 키워드를 입력해주세요!',
+        });
+        _isLoading = false;
+      });
+      _scrollToBottom();
+      return;
+    } else {
+      initialPrompt = '';
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final request = http.Request(
+        'POST',
+        Uri.parse('${Config.baseUrl}/api/chat/generate'),
+      ); // API Gateway URL 사용
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'model': 'gemma3:4b',
+        'prompt': initialPrompt,
+        'mode': newMode == 'book-recommendation' ? 'book' : newMode,
+        'stream': true,
+        'system': systemPrompt,
+        'character': 'harin',
+        'name': '하린',
       });
 
-      String initialPrompt = '';
-      if (newMode == 'novel-helper') initialPrompt = '소설 작성을 도와줘!';
-      else if (newMode == 'literary-analysis') initialPrompt = '문학 분석을 도와줘!';
-      else if (newMode == 'poetry-play') initialPrompt = '시 쓰기 놀이를 하자!';
-      else if (newMode == 'book-recommendation') {
-        setState(() {
-          messages.add({
-            'sender': 'harin',
-            'text': '어떤 종류의 책을 찾고 계신가요? 제목, 저자, 주제 등 키워드를 입력해주세요!',
-          });
-          _isLoading = false;
-        });
-        _scrollToBottom();
-        return;
-      } else {
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      try {
-        final request = http.Request(
-          'POST',
-          Uri.parse('${Config.baseUrl}/api/chat/generate'),
-        );
-        request.headers['Content-Type'] = 'application/json';
-        request.body = jsonEncode({
-          'model': 'gemma3:4b',
-          'prompt': initialPrompt,
-          'mode': newMode == 'book-recommendation' ? 'book' : newMode,
-          'stream': true,
-          'system': systemPrompt,
-          'character': 'harin',
-          'name': '하린',
-        });
-
-        final response = await request.send();
-        final stream = response.stream.transform(utf8.decoder).transform(const LineSplitter());
+      final response = await request.send();
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
 
       String fullResponse = '';
       await for (final line in stream) {
@@ -487,14 +485,28 @@
                         horizontal: 16,
                         vertical: 12,
                       ),
-                      child: const Text('전송'),
                     ),
-                  ],
-                ),
+                    child: const Text('전송'),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
+
+  Widget _navItem(IconData icon, String label) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 24, color: Colors.deepPurple),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.deepPurple),
+        ),
+      ],
+    );
+  }
+}
