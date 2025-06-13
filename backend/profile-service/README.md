@@ -1,4 +1,4 @@
-# 🖼️ Sodam Profile-Service
+# Profile-Service
 
 Sodam 캐릭터들의 **프로필(성격·관심사·이미지 등)** 을 저장·제공하는 마이크로서비스입니다.  
 챗봇 인격 설정에 이용되며, Gateway → Chat-Service 에서 호출해 AI 시스템 프롬프트를 구성합니다.
@@ -9,7 +9,7 @@ Sodam 캐릭터들의 **프로필(성격·관심사·이미지 등)** 을 저장
 
 ---
 
-## ✨ 주요 엔드포인트
+## 주요 엔드포인트
 | Path | Method | 설명 |
 |------|--------|------|
 | /api/profile/{username} | **GET** | 캐릭터 프로필 조회 *(초기 4종: harin·sera·yuri·mina)* |
@@ -30,7 +30,7 @@ Sodam 캐릭터들의 **프로필(성격·관심사·이미지 등)** 을 저장
 
 ---
 
-## 🚀 빠른 시작
+## 실행 방법법
 
 bash
 # 1) 의존성 설치
@@ -51,7 +51,7 @@ uvicorn app:app --reload --port 8003
 
 ---
 
-## 📂 프로젝트 구조
+## 프로젝트 구조
 
 text
 profile-service/
