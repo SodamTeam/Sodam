@@ -1,6 +1,3 @@
-아래 내용을 통째로 복사해 `backend/chat-service/README.md` 에 붙여넣으시면 됩니다.
-
-````markdown
 # 💬 Sodam Chat-Service
 
 **Sodam** 모바일 앱의 ‘대화/콘텐츠 생성’ 마이크로서비스입니다.  
