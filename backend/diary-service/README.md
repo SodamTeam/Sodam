@@ -44,7 +44,7 @@ pip install fastapi uvicorn pydantic
 
 # 2) 서버 실행
 uvicorn app:app --reload --port 8005
-# Swagger UI: http://localhost:8005/docs
+Swagger UI: http://localhost:8005/docs
 
 
 > 첫 실행 시 emotion_diary.db 및 diary_entries 테이블이 자동으로 만들어집니다.
