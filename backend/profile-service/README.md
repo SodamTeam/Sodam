@@ -1,77 +1,80 @@
-# Profile-Service
+````markdown
+# Sodam Profile-Service
 
-Sodam 캐릭터들의 **프로필(성격·관심사·이미지 등)** 을 저장·제공하는 마이크로서비스입니다.  
-챗봇 인격 설정에 이용되며, Gateway → Chat-Service 에서 호출해 AI 시스템 프롬프트를 구성합니다.
-
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688?logo=fastapi&logoColor=white)
-![Python](https://img.shields.io/badge/python-3.11-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+이 모듈은 Sodam에 등장하는 캐릭터(하린·세라·유리·미나)의 **프로필—성격, 관심사, 이미지 등**을 보관하고 전달합니다.  
+Gateway가 Chat-Service를 호출할 때 프로필 정보를 읽어 챗봇 프롬프트를 만드는 데 활용합니다.
 
 ---
 
-## 주요 엔드포인트
-| Path | Method | 설명 |
-|------|--------|------|
-| /api/profile/{username} | **GET** | 캐릭터 프로필 조회 *(초기 4종: harin·sera·yuri·mina)* |
-| /api/profile/{username} | **PUT** | 프로필 갱신 |
-| /{username} | **POST** | 새 프로필 생성(내부용) |
+## 엔드포인트
 
-* 애플리케이션 시작 시 **초기 프로필 4건**(문학·테크·과학·힐링 소녀) 자동 삽입  
-* FastAPI + SQLAlchemy + SQLite(profile.db)  
-* 전역 CORS 허용
+| Method | URL | 설명 |
+|--------|-----|------|
+| **GET**  | `/api/profile/{username}` | 캐릭터 프로필 조회 |
+| **PUT**  | `/api/profile/{username}` | 프로필 수정 |
+| **POST** | `/{username}`            | 새 프로필 등록(내부용) |
+
+- 서버를 처음 실행하면 하린·세라·유리·미나 4명의 기본 프로필이 자동 입력됩니다.  
+- FastAPI + SQLAlchemy + SQLite(`profile.db`)를 사용합니다.  
+- CORS는 개발 편의를 위해 전체 허용 상태입니다.
 
 ---
 
-## 🛠️ 기술 스택
-| Layer  | Tech |
-|--------|------|
+## 기술 스택
+
+| 구분 | 사용 기술 |
+|------|-----------|
 | Backend | FastAPI, Uvicorn |
-| ORM/DB | SQLAlchemy + SQLite |
+| ORM/DB  | SQLAlchemy + SQLite |
 
 ---
 
-## 실행 방법법
+## 사용 방법
 
-bash
-# 1) 의존성 설치
-python -m venv .venv && source .venv/bin/activate   # Windows: .\.venv\Scripts\activate
+```bash
+# 가상환경 생성
+python -m venv .venv
+source .venv/bin/activate        # Windows: .\.venv\Scripts\activate
+
+# 패키지 설치
 pip install -r requirements.txt
 
-# 2) DB 초기화(최초 1회)
+# (최초 1회) DB 테이블 생성
 python - <<'PY'
 from database import Base, engine
 import models
 Base.metadata.create_all(bind=engine)
 PY
 
-# 3) 서버 실행
+# 서버 실행
 uvicorn app:app --reload --port 8003
-Swagger: http://localhost:8003/docs
-
+# 문서: http://localhost:8003/docs
+````
 
 ---
 
-## 📂 프로젝트 구조
+## 프로젝트 구조
 
-text
+```
 profile-service/
+│
 ├── app.py          # FastAPI 엔트리포인트
-├── database.py     # DB 세션 · 엔진
-├── models.py       # Profile 테이블
+├── database.py     # DB 엔진·세션
+├── models.py       # SQLAlchemy 모델
 ├── schemas.py      # Pydantic 스키마
-├── Dockerfile      # (옵션: 컨테이너화 시 사용)
 ├── requirements.txt
-└── profile.db      # SQLite (런타임 생성)
+└── profile.db      # SQLite 파일(런타임 생성)
+```
 
+---
+
+## 환경 변수 (선택)
+
+| 변수             | 기본값                      | 용도               |
+| -------------- | ------------------------ | ---------------- |
+| `DATABASE_URL` | `sqlite:///./profile.db` | 다른 DB 사용 시 경로 변경 |
+| `PORT`         | 8003                     | Uvicorn 포트 변경    |
 
 ---
 
 
-## 🔧 환경 변수 (선택)
-
-| 변수             | 기본값                      | 설명                  |
-| -------------- | ------------------------ | ------------------- |
-| DATABASE_URL | sqlite:///./profile.db | 다른 RDBMS 사용 시 오버라이드 |
-| PORT         | 8003                     | Uvicorn 포트 변경 시     |
-
----
