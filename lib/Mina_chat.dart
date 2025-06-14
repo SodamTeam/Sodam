@@ -206,13 +206,6 @@ class _MinaChatState extends State<MinaChat> {
     });
   }
 
-  Widget _navItem(IconData icon, String label) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [Icon(icon, size: 24, color: Colors.pink), Text(label, style: const TextStyle(fontSize: 12, color: Colors.pink))],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -228,7 +221,6 @@ class _MinaChatState extends State<MinaChat> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // 왼쪽 버튼
                   Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
@@ -236,7 +228,6 @@ class _MinaChatState extends State<MinaChat> {
                       icon: const Icon(Icons.chevron_left),
                     ),
                   ),
-                  // 가운데 텍스트
                   const Text(
                     '미나',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -244,21 +235,20 @@ class _MinaChatState extends State<MinaChat> {
                 ],
               ),
             ),
-            // ─── 헤더 2/2: 왼쪽 아바타 + 이름
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // 수정: 세로 패딩 축소
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 16,
-                    backgroundImage: AssetImage('assets/girl3.png'), // 수정: 미나 사진
+                    backgroundImage: AssetImage('assets/girl3.png'),
                   ),
-                  const SizedBox(width: 4),                             // 수정: 가로 여백 축소
+                  const SizedBox(width: 4),
                   const Text(
-                    '미나',                                              // 수정: 이름 추가
+                    '미나',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey,                                // 수정: 유리 화면과 동일한 색
+                      color: Colors.grey,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -282,7 +272,13 @@ class _MinaChatState extends State<MinaChat> {
                         color: isMina ? Colors.white : Colors.pink[100],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(msg['text']!, style: TextStyle(color: isMina ? Colors.black87 : Colors.pink[900], fontSize: 15)),
+                      child: Text(
+                        msg['text']!,
+                        style: TextStyle(
+                          color: isMina ? Colors.black87 : Colors.pink[900],
+                          fontSize: 15,
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -294,9 +290,27 @@ class _MinaChatState extends State<MinaChat> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  ElevatedButton(onPressed: _isLoading ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => EmotionDiary(onGoBack: () => Navigator.pop(context)))), child: const Text('감정일기 작성')),
-                  ElevatedButton(onPressed: _isLoading ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => MeditationContent(onGoBack: () => Navigator.pop(context)))), child: const Text('명상 & 릴렉스 콘텐츠')),
-                  ElevatedButton(onPressed: _isLoading ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => EncouragementGenerator(onGoBack: () => Navigator.pop(context)))), child: const Text('응원 메시지 생성')),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => EmotionDiary(onGoBack: () => Navigator.pop(context))),
+                    ),
+                    child: const Text('감정일기 작성'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => MeditationContent(onGoBack: () => Navigator.pop(context))),
+                    ),
+                    child: const Text('명상 & 릴렉스 콘텐츠'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => EncouragementGenerator(onGoBack: () => Navigator.pop(context))),
+                    ),
+                    child: const Text('응원 메시지 생성'),
+                  ),
                 ],
               ),
             ),
@@ -319,7 +333,6 @@ class _MinaChatState extends State<MinaChat> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _isLoading ? null : () => _sendMessage(),
-
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.pink,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -331,26 +344,6 @@ class _MinaChatState extends State<MinaChat> {
               ),
             ),
           ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          height: 56,
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Colors.grey)),
-            color: Colors.white,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(Icons.home, '홈'),
-              _navItem(Icons.smart_toy, 'AI'),
-              _navItem(Icons.search, '탐색'),
-              _navItem(Icons.settings, '설정'),
-              _navItem(Icons.person, '나'),
-            ],
-          ),
         ),
       ),
     );
