@@ -48,14 +48,14 @@ Flutter를 사용하여 개발된 소담은 다양한 개성과 매력을 지닌
    ollama run gemma3:4b
    ```
 
-   ※ gemma3:4b 대신 다른 모델명을 사용하고 싶다면 Ollama 모델 목록에서 확인하자.
+   ※ gemma3:4b 대신 다른 모델명을 사용하고 싶다면 [Ollama 모델 목록](https://ollama.com/search)에서 확인하자.
 
    참고: 컴퓨터 사양에 따라 모델을 변경하고 싶을 때는 backend/chat-service/app.py 파일에서
    
    ```
    DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemma3:4b")
    ```
-   
+
    이 부분의 "gemma3:4b" 값을 원하는 모델명으로 수정하면 된다.
 
 
