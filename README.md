@@ -35,21 +35,27 @@ Flutter를 사용하여 개발된 소담은 다양한 개성과 매력을 지닌
 
 2. Ollama 설치
    - [Ollama 공식 다운로드 사이트](https://ollama.com/download)에서 운영체제에 맞는 설치 파일을 다운로드하여 설치한다.
+
    - 설치가 완료되면 터미널을 열고 Ollama가 정상 설치되었는지 확인하기 위해 다음 명령어를 실행한다:
+
    ```
    ollama --version
    ```
 
    - 설치가 완료되면 소담이 사용하는 모델인 Gemma3 4B를 설치하기 위해 터미널을 열고 아래 명령어를 입력한다:
+
    ```
    ollama run gemma3:4b
    ```
+
    ※ gemma3:4b 대신 다른 모델명을 사용하고 싶다면 Ollama 모델 목록에서 확인하자.
 
    참고: 컴퓨터 사양에 따라 모델을 변경하고 싶을 때는 backend/chat-service/app.py 파일에서
+   
    ```
    DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemma3:4b")
    ```
+   
    이 부분의 "gemma3:4b" 값을 원하는 모델명으로 수정하면 된다.
 
 
