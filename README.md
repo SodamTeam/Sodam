@@ -71,6 +71,20 @@ Flutter를 사용하여 개발된 소담은 다양한 개성과 매력을 지닌
    flutter pub get
    ```
 
+   ```
+   # 가상환경 생성
+   python -m venv venv
+
+   # Windows에서 가상환경 활성화
+   .\venv\Scripts\activate
+
+   # Linux/Mac에서 가상환경 활성화
+   source venv/bin/activate
+
+   cd .\backend\
+   pip install -r requirements.txt
+   ```
+
 5. 백엔드 서버 실행
    ```
    cd backend
