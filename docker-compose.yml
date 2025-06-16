@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  auth-service:
+    build: 
+      context: ./backend
+      dockerfile: auth-service/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - ENVIRONMENT=production
+    networks:
+      - sodam-network
+
+  profile-service:
+    build:
+      context: ./backend
+      dockerfile: profile-service/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - ENVIRONMENT=production
+    networks:
+      - sodam-network
+
+  chat-service:
+    build:
+      context: ./backend
+      dockerfile: chat-service/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=production
+    networks:
+      - sodam-network
+
+  gateway:
+    build:
+      context: ./backend
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+    networks:
+      - sodam-network
+    depends_on:
+      - auth-service
+      - profile-service
+      - chat-service
+
+networks:
+  sodam-network:
+    driver: bridge 
